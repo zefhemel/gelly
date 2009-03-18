@@ -80,8 +80,10 @@ void main(Array<String> args) {
       interp.handle(input);
     }
   }
-  //println(new Parser("3   * 8").acceptExp().toIndentedString(0));
-  //println(new Parser("rule : [ 10 ] -> [ 20 ]").acceptExp().toIndentedString(0));
+  /*
+  println(new Parser("3   * 8").acceptExp().toIndentedString(0));
+  println(new Parser("rule : [ 10 ] -> [ 20 ]").acceptExp().toIndentedString(0));
+  */
   /*
   var m = new Map<String, Term>();
   println(t.match(matchTerm, m));

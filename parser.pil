@@ -19,22 +19,23 @@ Term gel::util::valueOrEmpty(Term t) {
 class gel::Parser {
   String text = "";
   Int i = 0;
-  Int termOperatorIdx = 1;
 
   Array<Array<String>> operators = new Array<Array<String>>(
     new Array<String>("."),
     new Array<String>("*", "/", "%"),
-    new Array<String>("+", "->", "-"),
-    new Array<String>("<", ">"),
+    new Array<String>("+>", "+", "->", "-"),
+    new Array<String>("<+", "<", ">"),
     new Array<String>("!=", "!", "==", "="),
     new Array<String>("&&", "&"),
     new Array<String>("||", "|"),
-    new Array<String>("?", ":", "$"),
+    new Array<String>("::", "?", ":", "$"),
     new Array<String>(","),
+    new Array<String>("keyword"),
     new Array<String>(";")
     );
 
-  Array<String> prefixOps = new Array<String>("++", "+", "--", "*", "<", ">");
+  List<String> noWhitespaceOps = new List<String>(";", ",", ".");
+  Array<String> prefixOps = new Array<String>("++", "+", "--", "-", "*", "<", ">");
 
 
   new(String text) {
@@ -42,14 +43,16 @@ class gel::Parser {
   }
 
   Term followFactor(Term t) {
-    /*
-    if(!acceptWhiteSpace()) {
-      return t;
-    }
-    */
     var oldI = i;
-    acceptWhiteSpace();
-    var exp = acceptGeneric(termOperatorIdx);
+    if(!acceptWhiteSpace()) { // Postfix
+      var op = acceptOps(prefixOps);
+      if(op != null) {
+        t = new ConsTerm(2, new SymbolTerm(op), new Array<Term>(t));
+      }
+      acceptWhiteSpace();
+      oldI = i;
+    }
+    var exp = acceptFactor(); //acceptGeneric(termOperatorIdx);
     if(exp == null) {
       i = oldI;
       return t;
@@ -58,7 +61,7 @@ class gel::Parser {
       oldI = i;
       acceptWhiteSpace();
       t = new ConsTerm(0, new SymbolTerm("_"), new Array<Term>(t, exp));
-      exp = acceptGeneric(termOperatorIdx);
+      exp = acceptFactor(); //acceptGeneric(termOperatorIdx);
       if(exp == null) {
         i = oldI;
         return t;
@@ -68,46 +71,57 @@ class gel::Parser {
   }
 
   Term acceptFactor() {
+    var t = acceptFactorNoFollow();
+    if(t == null) {
+      return null;
+    } else {
+      return followFactor(t);
+    }
+  }
+
+  Term acceptFactorNoFollow() {
     var in = acceptInt();
     if(in != -1) {
-      return followFactor(new IntTerm(in));
+      return new IntTerm(in);
     }
     var idn = acceptIdn();
-    if(idn != null) {
-      return followFactor(new SymbolTerm(idn));
+    if(idn != null && !lookAhead(":")) {
+      return new SymbolTerm(idn);
+    } else if(idn != null && lookAhead(":")) {
+      i = i - idn.length;
     }
     var s = acceptString();
     if(s != null) {
-      return followFactor(new StringTerm(s));
+      return new StringTerm(s);
     }
     var mv = acceptMatchVar();
     if(mv != null) {
-      return followFactor(new MatchVarTerm(mv));
+      return new MatchVarTerm(mv);
     }
     var pe = acceptPrefixExp();
     if(pe != null) {
-      return followFactor(pe);
+      return pe;
     }
     if(accept('(')) {
       acceptWhiteSpace();
       var exp = acceptExp();
       acceptWhiteSpace();
       expect(')');
-      return followFactor(new ConsTerm(0, new SymbolTerm("()"), new Array<Term>(valueOrEmpty(exp))));
+      return new ConsTerm(0, new SymbolTerm("()"), new Array<Term>(valueOrEmpty(exp)));
     }
     if(accept('[')) {
       acceptWhiteSpace();
       var exp = acceptExp();
       acceptWhiteSpace();
       expect(']');
-      return followFactor(new ConsTerm(0, new SymbolTerm("[]"), new Array<Term>(valueOrEmpty(exp))));
+      return new ConsTerm(0, new SymbolTerm("[]"), new Array<Term>(valueOrEmpty(exp)));
     }
     if(accept('{')) {
       acceptWhiteSpace();
       var exp = acceptExp();
       acceptWhiteSpace();
       expect('}');
-      return followFactor(new ConsTerm(0, new SymbolTerm("{}"), new Array<Term>(valueOrEmpty(exp))));
+      return new ConsTerm(0, new SymbolTerm("{}"), new Array<Term>(valueOrEmpty(exp)));
     }
     return null;
   }
@@ -117,9 +131,9 @@ class gel::Parser {
     if(op == null) {
       return null;
     }
-    var t = acceptGeneric(1);
+    var t = acceptFactorNoFollow(); //acceptGeneric(0);
     if(t != null) {
-      return new ConsTerm(1, new SymbolTerm(op), new Array<Term>(valueOrEmpty(t)));
+      return new ConsTerm(1, new SymbolTerm(op), new Array<Term>(t));
     } else {
       return null;
     }
@@ -127,8 +141,20 @@ class gel::Parser {
 
   Term acceptGeneric(Int level) {
     Term f = null;
+    var inKeyworldLevel = false;
     if(level == 0) {
       f = acceptFactor();
+    } else if(operators[level][0] == "keyword") {
+      var veryOldI = i;
+      inKeyworldLevel = true;
+      var kw = acceptKeyword();
+      if(kw != null) {
+        i = veryOldI;
+        printRest();
+        f = new EmptyTerm();
+      } else {
+        f = acceptGeneric(level-1);
+      }
     } else {
       f = acceptGeneric(level-1);
     }
@@ -137,12 +163,14 @@ class gel::Parser {
     }
     var t = f;
     var oldI = i;
-    if(!acceptWhiteSpace()) {
+    var didAcceptWhitespace = acceptWhiteSpace();
+    var op = acceptOps(operators[level]);
+    if(!didAcceptWhitespace && op != null && !noWhitespaceOps.contains(op) && !inKeyworldLevel) {
+      i = oldI;
       return t;
     }
-    var op = acceptOps(operators[level]);
     while(op != null) {
-      if(!acceptWhiteSpace()) {
+      if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
         i = oldI;
         return t;
       }
@@ -154,7 +182,7 @@ class gel::Parser {
       }
       t = new ConsTerm(0, new SymbolTerm(op), new Array<Term>(t, valueOrEmpty(t2)));
       oldI = i;
-      if(!acceptWhiteSpace()) {
+      if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op) && !inKeyworldLevel) {
         i = oldI;
         return t;
       }
@@ -201,12 +229,31 @@ class gel::Parser {
 
   String acceptOps(Array<String> ops) {
     for(String op : ops) {
-      if(lookAhead(op)) {
+      if(op == "keyword") {
+        var kw = acceptKeyword();
+        if(kw != null) {
+          return kw;
+        }
+      } else if(lookAhead(op)) {
         i = i + op.length;
         return op;
       }
     }
     return null;
+  }
+
+  String acceptKeyword() {
+    var oldI = i;
+    var idn = acceptIdn();
+    if(idn == null) {
+      return null;
+    } 
+    if(accept(':')) {
+      return idn + ":";
+    } else {
+      i = oldI;
+      return null;
+    }
   }
 
 
@@ -287,6 +334,7 @@ class gel::Parser {
     if(i == text.length) {
       return null;
     }
+    var oldI = i;
     var sym = new MutableString();
     if((text[i] >= 'a' && text[i] <= 'z') || 
                               (text[i] >= 'A' && text[i] <= 'Z') ||

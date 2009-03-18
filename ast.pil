@@ -42,6 +42,11 @@ class gel::ConsTerm extends gel::Term {
     var s = new MutableString();
     s.append(spaces(depth));
     s.append("(");
+    if(type == 1) {
+      s.append("prefix:");
+    } else if(type == 2){
+      s.append("postfix:");
+    }
     s.append(constructor.as<String>);
     var sawCons = false;
     for(gel::Term t : children) {
