@@ -20,11 +20,14 @@ class gel::Parser {
   String text = "";
   Int i = 0;
 
+  Int keywordLevel = 9;
+  Int followLevel = 0;
+
   Array<Array<String>> operators = new Array<Array<String>>(
     new Array<String>("."),
     new Array<String>("*", "/", "%"),
     new Array<String>("+>", "+", "->", "-"),
-    new Array<String>("<+", "<", ">"),
+    new Array<String>("<+", "<=", "<", ">=", ">"),
     new Array<String>("!=", "!", "==", "="),
     new Array<String>("&&", "&"),
     new Array<String>("||", "|"),
@@ -52,7 +55,7 @@ class gel::Parser {
       acceptWhiteSpace();
       oldI = i;
     }
-    var exp = acceptFactor(); //acceptGeneric(termOperatorIdx);
+    var exp = acceptExp();// acceptGeneric(followLevel);
     if(exp == null) {
       i = oldI;
       return t;
@@ -61,7 +64,7 @@ class gel::Parser {
       oldI = i;
       acceptWhiteSpace();
       t = new ConsTerm(0, new SymbolTerm("_"), new Array<Term>(t, exp));
-      exp = acceptFactor(); //acceptGeneric(termOperatorIdx);
+      exp = acceptExp(); //acceptGeneric(followLevel);
       if(exp == null) {
         i = oldI;
         return t;
@@ -70,6 +73,7 @@ class gel::Parser {
     return t;
   }
 
+  /*
   Term acceptFactor() {
     var t = acceptFactorNoFollow();
     if(t == null) {
@@ -78,8 +82,9 @@ class gel::Parser {
       return followFactor(t);
     }
   }
+  */
 
-  Term acceptFactorNoFollow() {
+  Term acceptFactor() { //NoFollow() {
     var in = acceptInt();
     if(in != -1) {
       return new IntTerm(in);
@@ -131,7 +136,7 @@ class gel::Parser {
     if(op == null) {
       return null;
     }
-    var t = acceptFactorNoFollow(); //acceptGeneric(0);
+    var t = acceptFactor(); //acceptGeneric(0);
     if(t != null) {
       return new ConsTerm(1, new SymbolTerm(op), new Array<Term>(t));
     } else {
@@ -139,22 +144,33 @@ class gel::Parser {
     }
   }
 
+  Term acceptGenericKeyword() {
+    var kw = acceptKeyword();
+    if(kw == null) {
+      return acceptGeneric(keywordLevel - 1);
+    } 
+    acceptWhiteSpace();
+    var t = acceptGeneric(keywordLevel - 1);
+    if(t != null) {
+      printRest();
+      return followFactor(new ConsTerm(1, new SymbolTerm(kw), new Array<Term>(t)));
+    } else {
+      return null;
+    }
+  }
+
   Term acceptGeneric(Int level) {
     Term f = null;
-    var inKeyworldLevel = false;
     if(level == 0) {
       f = acceptFactor();
-    } else if(operators[level][0] == "keyword") {
-      var veryOldI = i;
-      inKeyworldLevel = true;
-      var kw = acceptKeyword();
-      if(kw != null) {
-        i = veryOldI;
-        printRest();
-        f = new EmptyTerm();
-      } else {
+    } else if(level == keywordLevel) {
+      //f = acceptGenericKeyword();
+      return acceptGenericKeyword();
+      /*
+      if(f == null) {
         f = acceptGeneric(level-1);
       }
+      */
     } else {
       f = acceptGeneric(level-1);
     }
@@ -165,9 +181,13 @@ class gel::Parser {
     var oldI = i;
     var didAcceptWhitespace = acceptWhiteSpace();
     var op = acceptOps(operators[level]);
-    if(!didAcceptWhitespace && op != null && !noWhitespaceOps.contains(op) && !inKeyworldLevel) {
+    if(!didAcceptWhitespace && op != null && !noWhitespaceOps.contains(op)) {
       i = oldI;
-      return t;
+      if(level == followLevel) {
+        return followFactor(t);
+      } else {
+        return t;
+      }
     }
     while(op != null) {
       if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
@@ -182,14 +202,18 @@ class gel::Parser {
       }
       t = new ConsTerm(0, new SymbolTerm(op), new Array<Term>(t, valueOrEmpty(t2)));
       oldI = i;
-      if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op) && !inKeyworldLevel) {
+      if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
         i = oldI;
         return t;
       }
       op = acceptOps(operators[level]);
     }
     i = oldI;
-    return t;
+    if(level == followLevel) {
+      return followFactor(t);
+    } else {
+      return t;
+    }
   }
 
   Term acceptExp() {
@@ -229,12 +253,12 @@ class gel::Parser {
 
   String acceptOps(Array<String> ops) {
     for(String op : ops) {
-      if(op == "keyword") {
+      /*if(op == "keyword") {
         var kw = acceptKeyword();
         if(kw != null) {
           return kw;
         }
-      } else if(lookAhead(op)) {
+      } else*/ if(lookAhead(op)) {
         i = i + op.length;
         return op;
       }
