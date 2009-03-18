@@ -1,0 +1,29 @@
+import "ast.pil"
+
+import gel
+
+class gelly::rewrite::FailException extends Exception {
+}
+
+Term gelly::rewrite::apply(Function1<Term, Term> str, Term t) {
+  return str(t);
+}
+
+Term gelly::rewrite::try(Function1<Term, Term> str, Term t) {
+  try {
+    return str(t);
+  }
+  catch(FailException fe) {
+    return t;
+  }
+}
+
+Term gelly::rewrite::all(Function1<Term, Term> str, Term t) {
+  if(t instanceof ConsTerm) {
+    var trm = t.as<ConsTerm>;
+    try {
+
+    }
+  }
+}
+
