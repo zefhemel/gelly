@@ -1,0 +1,91 @@
+import "ast.pil"
+
+import zisp
+
+class zisp::EvalException extends Exception {
+  new(String message) extends super(message) {
+  }
+}
+
+
+class zisp::Evaluator {
+  Term eval(Term t) {
+    return t;
+  }
+}
+
+Map<String, Evaluator> zisp::functions = new Map<String, Evaluator>();
+Map<String, Term> zisp::globalDefs = new Map<String, Term>();
+
+Term zisp::evaluate(Term t) {
+  //println("Now evaling: " + t.toString());
+  if(t instanceof ConsTerm) {
+    var term = t.as<ConsTerm>;
+    return functions[term.constructor.as<SymbolTerm>.symbol].eval(t);
+  }
+  if(t instanceof SymbolTerm) {
+    return globalDefs[getSymbol(t)];
+  }
+  return t;
+}
+
+class zisp::eval::Plus extends Evaluator {
+  Term eval(Term t) {
+    var value = 0;
+    var term = t.as<ConsTerm>;
+    for(Term v : term.children) {
+      var val = evaluate(v);
+      value = value + getInt(val);
+    }
+    return new IntTerm(value);
+  }
+}
+
+class zisp::eval::Multiply extends Evaluator {
+  Term eval(Term t) {
+    var value = 1;
+    var term = t.as<ConsTerm>;
+    for(Term v : term.children) {
+      var val = evaluate(v);
+      value = value * getInt(val);
+    }
+    return new IntTerm(value);
+  }
+}
+
+class zisp::eval::Def extends Evaluator {
+  Term eval(Term t) {
+    var value = 1;
+    var term = t.as<ConsTerm>;
+    var result = evaluate(term.children[1]);
+    globalDefs[getSymbol(term.children[0])] = result;
+    return result;
+  }
+}
+
+String zisp::getString(Term t) {
+  if(!(t instanceof StringTerm)) {
+    throw new EvalException("Expected String, but got: " + t.as<String>);
+  }
+  return t.as<StringTerm>.value;
+}
+
+String zisp::getSymbol(Term t) {
+  if(!(t instanceof SymbolTerm)) {
+    throw new EvalException("Expected Symbol, but got: " + t.as<String>);
+  }
+  return t.as<SymbolTerm>.symbol;
+}
+
+Int zisp::getInt(Term t) {
+  if(!(t instanceof IntTerm)) {
+    throw new EvalException("Expected Int, but got: " + t.as<String>);
+  }
+  return t.as<IntTerm>.value;
+}
+
+void zisp::evalInit() {
+  functions["+"] = new zisp::eval::Plus();
+  functions["*"] = new zisp::eval::Multiply();
+  functions["def"] = new zisp::eval::Def();
+}

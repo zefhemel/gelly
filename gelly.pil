@@ -1,0 +1,90 @@
+import "ast.pil"
+import "parser.pil"
+//import "evaluator.pil"
+
+import gel
+
+class gel::Interpreter {
+  Term buildPattern = new Parser("build(?t)").acceptExp();
+  Term rulePattern = new Parser("?rn : [ ?lh ] -> [ ?rh ]").acceptExp();
+  Term applyPattern = new Parser("apply(?t)").acceptExp();
+
+  Map<String, Term> ruleDefs = new Map<String, Term>();
+  Term currentTerm = null;
+
+  void handleBuild(Term t) {
+    var m = new Map<String, Term>();
+    if(buildPattern.match(t, m)) {
+      currentTerm = m["t"];
+      println("Current term set");
+    }
+  }
+
+  void handleRuleDef(Term t) {
+    var m = new Map<String, Term>();
+    if(rulePattern.match(t, m)) {
+      println("Defining rule!");
+      ruleDefs[m["rn"].as<SymbolTerm>.symbol] = t;
+      println(m);
+    }
+  }
+
+  Term apply(String ruleName, Term t) {
+    if(ruleDefs.contains(ruleName)) {
+      var rule = ruleDefs[ruleName];
+      var m = new Map<String, Term>();
+      rulePattern.match(rule, m);
+      var m2 = new Map<String, Term>();
+      if(m["lh"].match(t, m2)) {
+        currentTerm = m["rh"].construct(m2);
+        return currentTerm;
+      } else {
+        throw new Exception("Could not apply!");
+      }
+    } else {
+      throw new Exception("No rule named " + ruleName);
+    }
+  }
+
+  void handleApply(Term t) {
+    var m = new Map<String, Term>();
+    if(applyPattern.match(t, m)) {
+      var ruleName = m["t"].as<SymbolTerm>.symbol;
+      try {
+        println(apply(ruleName, currentTerm));
+      } catch(Exception e) {
+        println("Application failed");
+      }
+    }
+  }
+
+  void handle(String input) {
+    var p = new Parser(input);
+    var t = p.acceptExp();
+    println(t.toIndentedString(0));
+    handleBuild(t);
+    handleRuleDef(t);
+    handleApply(t);
+  }
+}
+
+void main(Array<String> args) {
+  //evalInit();
+  String input = null;
+  println("Welcome to zisp, type :q to quit.");
+  var interp = new Interpreter();
+  while(input != ":q") {
+    print("> ");
+    input = readln();
+    if(input != ":q") {
+      interp.handle(input);
+    }
+  }
+  //println(new Parser("3   * 8").acceptExp().toIndentedString(0));
+  //println(new Parser("rule : [ 10 ] -> [ 20 ]").acceptExp().toIndentedString(0));
+  /*
+  var m = new Map<String, Term>();
+  println(t.match(matchTerm, m));
+  println(m);
+  */
+}

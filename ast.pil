@@ -1,0 +1,239 @@
+import gel
+import gel::util
+
+class gel::Term {
+  String toIndentedString(Int depth) {
+    return this.as<String>;
+  }
+
+  Bool match(Term t, Map<String, Term> bindings) {
+    if(t instanceof MatchVarTerm) {
+      return t.match(this, bindings);
+    } else {
+      return t == this;
+    }
+  }
+
+  Term construct(Map<String, Term> bindings) {
+    return this;
+  }
+}
+
+String gel::util::spaces(Int n) {
+  var m = new MutableString();
+  for(Int i = 0; i < n; i++) {
+    m.append("  ");
+  }
+  return m.as<String>;
+}
+
+class gel::ConsTerm extends gel::Term {
+  Term constructor = null;
+  Array<Term> children = null;
+  Int type = 0; // 0 = infix, 1 = prefix, 2 = postfix
+
+  new(Int type, gel::Term constructor, Array<gel::Term> children) {
+    this.type = type;
+    this.constructor = constructor;
+    this.children = children;
+  }
+
+  String toIndentedString(Int depth) {
+    var s = new MutableString();
+    s.append(spaces(depth));
+    s.append("(");
+    s.append(constructor.as<String>);
+    var sawCons = false;
+    for(gel::Term t : children) {
+      if(t instanceof ConsTerm) {
+        s.append("\n");
+        sawCons = true;
+      } else if(sawCons) {
+        s.append("\n");
+        s.append(spaces(depth+1));
+      } else {
+        s.append(' ');
+      }
+      s.append(t.toIndentedString(depth+1));
+    }
+    s.append(')');
+    return s.as<String>;
+  }
+
+  Bool match(Term t, Map<String, Term> bindings) {
+    if(t instanceof ConsTerm) {
+      var t2 = t.as<ConsTerm>;
+      if(constructor instanceof MatchVarTerm) {
+        if(!constructor.match(t2.constructor, bindings)) {
+          return false;
+        }
+      } else {
+        if(!constructor.match(t2.constructor, bindings)) {
+          return false;
+        }
+      }
+      for(Int i = 0; i < children.length; i++) {
+        if(i < t2.children.length) {
+          if(children[i] instanceof MatchVarTerm) {
+            if(!children[i].match(t2.children[i], bindings)) {
+              return false;
+            }
+          } else {
+            if(!children[i].match(t2.children[i], bindings)) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Term construct(Map<String, Term> bindings) {
+    var newChildren = new Array<Term>(children.length);
+    for(Int i = 0; i < children.length; i++) {
+      newChildren[i] = children[i].construct(bindings);
+    }
+    var nt = new ConsTerm(type, constructor.construct(bindings), newChildren);
+    return nt;
+  }
+
+  as<String> {
+    var s = new MutableString("(");
+    s.append(constructor.as<String>);
+    s.append(' ');
+    for(gel::Term t : children) {
+      s.append(t.as<String>);
+      if(t != (children[children.length-1])) {
+        s.append(" ");
+      }
+    }
+    s.append(')');
+    return s.as<String>;
+  }
+}
+
+class gel::IntTerm extends gel::Term {
+  Int value = 0;
+
+  new(Int value) {
+    this.value = value;
+  }
+
+  Bool ==(Object o) {
+    if(o == null) {
+      return false;
+    }
+    if(o instanceof IntTerm) {
+      return o.as<IntTerm>.value == value;
+    } else {
+      return false;
+    }
+  }
+
+  as<String> {
+    var ms = new MutableString();
+    ms.append(value);
+    return ms.as<String>;
+  }
+}
+
+class gel::EmptyTerm extends gel::Term {
+  new() { 
+  }
+
+  Bool ==(Object o) {
+    if(o == null) {
+      return false;
+    }
+    return o instanceof EmptyTerm;
+  }
+
+  as<String> {
+    return "[empty]";
+  }
+}
+
+class gel::StringTerm extends gel::Term {
+  String value = null;
+
+  new(String value) {
+    this.value = value;
+  }
+
+  Bool ==(Object o) {
+    if(o == null) {
+      return false;
+    }
+    if(o instanceof StringTerm) {
+      return o.as<StringTerm>.value == value;
+    } else {
+      return false;
+    }
+  }
+
+  as<String> {
+    return "\"" + value + "\"";
+  }
+}
+
+class gel::SymbolTerm extends gel::Term {
+  String symbol = null;
+
+  new(String symbol) {
+    this.symbol = symbol;
+  }
+
+  Bool ==(Object o) {
+    if(o == null) {
+      return false;
+    }
+    if(o instanceof SymbolTerm) {
+      return o.as<SymbolTerm>.symbol == symbol;
+    } else {
+      return false;
+    }
+  }
+
+  as<String> {
+    return symbol;
+  }
+}
+
+class gel::MatchVarTerm extends gel::Term {
+  String symbol = null;
+
+  new(String symbol) {
+    this.symbol = symbol;
+  }
+
+  as<String> {
+    return "<?" + symbol + ">";
+  }
+
+  Bool ==(Object o) {
+    if(o == null) {
+      return false;
+    }
+    if(o instanceof MatchVarTerm) {
+      return o.as<MatchVarTerm>.symbol == symbol;
+    } else {
+      return false;
+    }
+  }
+
+  Bool match(Term t, Map<String, Term> bindings) {
+    if(bindings.contains(symbol)) {
+      return bindings[symbol] == t;
+    } else {
+      bindings[symbol] = t;
+      return true;
+    }
+  }
+
+  Term construct(Map<String, Term> bindings) {
+    return bindings[symbol];
+  }
+}

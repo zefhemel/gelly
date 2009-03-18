@@ -1,0 +1,336 @@
+import "ast.pil"
+
+import gel
+import gel::util
+
+class gel::ParseException extends Exception {
+  new(String message) extends super(message) {
+  }
+}
+
+Term gel::util::valueOrEmpty(Term t) {
+  if(t == null) {
+    return new EmptyTerm();
+  } else {
+    return t;
+  }
+}
+
+class gel::Parser {
+  String text = "";
+  Int i = 0;
+  Int termOperatorIdx = 1;
+
+  Array<Array<String>> operators = new Array<Array<String>>(
+    new Array<String>("."),
+    new Array<String>("*", "/", "%"),
+    new Array<String>("+", "->", "-"),
+    new Array<String>("<", ">"),
+    new Array<String>("!=", "!", "==", "="),
+    new Array<String>("&&", "&"),
+    new Array<String>("||", "|"),
+    new Array<String>("?", ":", "$"),
+    new Array<String>(","),
+    new Array<String>(";")
+    );
+
+  Array<String> prefixOps = new Array<String>("++", "+", "--", "*", "<", ">");
+
+
+  new(String text) {
+    this.text = text;
+  }
+
+  Term followFactor(Term t) {
+    /*
+    if(!acceptWhiteSpace()) {
+      return t;
+    }
+    */
+    var oldI = i;
+    acceptWhiteSpace();
+    var exp = acceptGeneric(termOperatorIdx);
+    if(exp == null) {
+      i = oldI;
+      return t;
+    }
+    while(exp != null) {
+      oldI = i;
+      acceptWhiteSpace();
+      t = new ConsTerm(0, new SymbolTerm("_"), new Array<Term>(t, exp));
+      exp = acceptGeneric(termOperatorIdx);
+      if(exp == null) {
+        i = oldI;
+        return t;
+      }
+    }
+    return t;
+  }
+
+  Term acceptFactor() {
+    var in = acceptInt();
+    if(in != -1) {
+      return followFactor(new IntTerm(in));
+    }
+    var idn = acceptIdn();
+    if(idn != null) {
+      return followFactor(new SymbolTerm(idn));
+    }
+    var s = acceptString();
+    if(s != null) {
+      return followFactor(new StringTerm(s));
+    }
+    var mv = acceptMatchVar();
+    if(mv != null) {
+      return followFactor(new MatchVarTerm(mv));
+    }
+    var pe = acceptPrefixExp();
+    if(pe != null) {
+      return followFactor(pe);
+    }
+    if(accept('(')) {
+      acceptWhiteSpace();
+      var exp = acceptExp();
+      acceptWhiteSpace();
+      expect(')');
+      return followFactor(new ConsTerm(0, new SymbolTerm("()"), new Array<Term>(valueOrEmpty(exp))));
+    }
+    if(accept('[')) {
+      acceptWhiteSpace();
+      var exp = acceptExp();
+      acceptWhiteSpace();
+      expect(']');
+      return followFactor(new ConsTerm(0, new SymbolTerm("[]"), new Array<Term>(valueOrEmpty(exp))));
+    }
+    if(accept('{')) {
+      acceptWhiteSpace();
+      var exp = acceptExp();
+      acceptWhiteSpace();
+      expect('}');
+      return followFactor(new ConsTerm(0, new SymbolTerm("{}"), new Array<Term>(valueOrEmpty(exp))));
+    }
+    return null;
+  }
+
+  Term acceptPrefixExp() {
+    var op = acceptOps(prefixOps);
+    if(op == null) {
+      return null;
+    }
+    var t = acceptGeneric(1);
+    if(t != null) {
+      return new ConsTerm(1, new SymbolTerm(op), new Array<Term>(valueOrEmpty(t)));
+    } else {
+      return null;
+    }
+  }
+
+  Term acceptGeneric(Int level) {
+    Term f = null;
+    if(level == 0) {
+      f = acceptFactor();
+    } else {
+      f = acceptGeneric(level-1);
+    }
+    if(f == null) {
+      return null;
+    }
+    var t = f;
+    var oldI = i;
+    if(!acceptWhiteSpace()) {
+      return t;
+    }
+    var op = acceptOps(operators[level]);
+    while(op != null) {
+      if(!acceptWhiteSpace()) {
+        i = oldI;
+        return t;
+      }
+      Term t2 = null;
+      if(level == 0) {
+        t2 = acceptFactor();
+      } else {
+        t2 = acceptGeneric(level-1);
+      }
+      t = new ConsTerm(0, new SymbolTerm(op), new Array<Term>(t, valueOrEmpty(t2)));
+      oldI = i;
+      if(!acceptWhiteSpace()) {
+        i = oldI;
+        return t;
+      }
+      op = acceptOps(operators[level]);
+    }
+    i = oldI;
+    return t;
+  }
+
+  Term acceptExp() {
+    acceptWhiteSpace();
+    return acceptGeneric(operators.length-1);
+  }
+
+  Bool acceptWhiteSpace() {
+    var oldI = i;
+    while(i < text.length && (text[i] == ' ' || text[i] == '\t' || text[i] == '\n' || text[i] == '\r')) { 
+      i++;
+    }
+    return oldI != i;
+  }
+
+  void printRest() {
+    var m = new MutableString();
+    for(Int j = i; j < text.length; j++) {
+      m.append(text[j]);
+    }
+    println(m.as<String>);
+  }
+
+  Bool lookAhead(String str) {
+    var parsedSomething = false;
+    for(Int j = 0; j < str.length && i+j < text.length; j++) {
+      if(text[j+i] != str[j]) {
+        return false;
+      }
+      if(i+j+1 == text.length && j+1 < str.length) {
+        return false;
+      }
+      parsedSomething = true;
+    }
+    return parsedSomething;
+  }
+
+  String acceptOps(Array<String> ops) {
+    for(String op : ops) {
+      if(lookAhead(op)) {
+        i = i + op.length;
+        return op;
+      }
+    }
+    return null;
+  }
+
+
+  Int acceptInt() {
+    if(i == text.length) {
+      return -1;
+    }
+    var s = new MutableString();
+    if(text[i] >= '0' && text[i] <= '9') {
+      while(i < text.length && text[i] >= '0' && text[i] <= '9') {
+        s.append(text[i]);
+        i++;
+      }
+      return s.as<Int>;
+    } else {
+      return -1;
+    }
+  }
+
+  String acceptString() {
+    if(i == text.length) {
+      return null;
+    }
+    var s = new MutableString();
+    if(text[i] == '"') {
+      i++;
+      while(i < text.length && text[i] != '"' && text[i-1] != '\\') {
+        if(!(text[i] == '\\' && i < (text.length + 1) && text[i+1] == '"')) {
+          s.append(text[i]);
+        }
+        i = i + 1;
+      }
+      i = i + 1;
+      return s.as<String>;
+    } else {
+      return null;
+    }
+  }
+
+  Bool accept(Char c) {
+    if(i == text.length) {
+      return false;
+    }
+    if(text[i] == c) {
+      i++;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void expect(Char c) {
+    if(i == text.length) {
+      print("Rest of the buffer: ");
+      printRest();
+      throw new ParseException("Expected: " + c.as<String>);
+    }
+    if(text[i] == c) {
+      i++;
+    } else {
+      print("Rest of the buffer: ");
+      printRest();
+      throw new ParseException("Expected: " + c.as<String>);
+    }
+  }
+
+  String acceptMatchVar() {
+    if(i == text.length) {
+      return null;
+    }
+    if(!accept('?')) {
+      return null;
+    }
+    return acceptIdn();
+  }
+
+  String acceptIdn() {
+    if(i == text.length) {
+      return null;
+    }
+    var sym = new MutableString();
+    if((text[i] >= 'a' && text[i] <= 'z') || 
+                              (text[i] >= 'A' && text[i] <= 'Z') ||
+                              (text[i] == '_')) {
+      sym.append(text[i]);
+      i++;
+    } else {
+      return null;
+    }
+    // Read constructor
+    while(i < text.length && ((text[i] >= 'a' && text[i] <= 'z') || 
+                              (text[i] >= 'A' && text[i] <= 'Z') ||
+                              (text[i] >= '0' && text[i] <= '9') ||
+                              (text[i] == '_'))) {
+      sym.append(text[i]);
+      i++;
+    }
+    return sym.as<String>;
+  }
+
+  /*
+  gel::ConsTerm parseCons() {
+    var cons = new MutableString();
+    i++;
+    skipWhiteSpace();
+    var constructor = parseSymbol();
+    skipWhiteSpace();
+    var terms = new List<gel::Term>();
+    while(i < text.length && text[i] != ')') {
+      terms.add(parse());
+      skipWhiteSpace();
+    }
+    i++;
+    return new gel::ConsTerm(constructor, terms.as<Array<gel::Term>>);
+  }
+
+  gel::SymbolTerm parseSymbol() {
+    var sym = new MutableString();
+    // Read constructor
+    while(i < text.length && text[i] != ' ' && text[i] != '\t' && text[i] != '\n' && text[i] != '\r' && text[i] != ')') {
+      sym.append(text[i]);
+      i++;
+    }
+    return new gel::SymbolTerm(sym.as<String>);
+  }
+  */
+}
