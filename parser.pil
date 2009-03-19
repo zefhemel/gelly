@@ -55,7 +55,8 @@ class gel::Parser {
       acceptWhiteSpace();
       oldI = i;
     }
-    var exp = acceptExp();// acceptGeneric(followLevel);
+    var exp = acceptExp();
+    //var exp = acceptGeneric(followLevel);
     if(exp == null) {
       i = oldI;
       return t;
@@ -64,7 +65,8 @@ class gel::Parser {
       oldI = i;
       acceptWhiteSpace();
       t = new ConsTerm(0, new SymbolTerm("_"), new Array<Term>(t, exp));
-      exp = acceptExp(); //acceptGeneric(followLevel);
+      exp = acceptExp();
+      //exp = acceptGeneric(followLevel);
       if(exp == null) {
         i = oldI;
         return t;
@@ -147,16 +149,20 @@ class gel::Parser {
   }
 
   Term acceptGenericKeyword() {
+    var oldI = i;
+    acceptWhiteSpace();
     var kw = acceptKeyword();
     if(kw == null) {
+      i = oldI;
       return acceptGeneric(keywordLevel - 1);
     } 
     acceptWhiteSpace();
     var t = acceptGeneric(keywordLevel - 1);
     if(t != null) {
-      printRest();
-      return followFactor(new ConsTerm(1, new SymbolTerm(kw), new Array<Term>(t)));
+      //return followFactor(new ConsTerm(1, new SymbolTerm(kw), new Array<Term>(t)));
+      return new ConsTerm(1, new SymbolTerm(kw), new Array<Term>(t));
     } else {
+      i = oldI;
       return null;
     }
   }
@@ -166,8 +172,8 @@ class gel::Parser {
     if(level == 0) {
       f = acceptFactor();
     } else if(level == keywordLevel) {
-      //f = acceptGenericKeyword();
-      return acceptGenericKeyword();
+      f = acceptGenericKeyword();
+      //return acceptGenericKeyword();
       /*
       if(f == null) {
         f = acceptGeneric(level-1);
@@ -236,6 +242,7 @@ class gel::Parser {
     for(Int j = i; j < text.length; j++) {
       m.append(text[j]);
     }
+    print("Rest: |");
     println(m.as<String>);
   }
 

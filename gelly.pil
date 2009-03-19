@@ -2,6 +2,7 @@ import "ast.pil"
 import "parser.pil"
 //import "evaluator.pil"
 import "rewrite.pil"
+import "/Users/zef/svn/pil/src/lib/io.pil"
 
 import gel
 import gelly::rewrite
@@ -12,12 +13,13 @@ class gel::Interpreter {
   Term rulePattern = replaceMatchVar(new Parser("m_rn : [ m_lh ] -> [ m_rh ]").acceptExp(), "m_");
   Term showBindingsPattern = new Parser(":bindings").acceptExp();
   Term showCurrentTermPattern = new Parser(":show").acceptExp();
+  Term importPattern = replaceMatchVar(new Parser(":import m_fn").acceptExp(), "m_");
 
   Map<String, Term> ruleDefs = new Map<String, Term>();
   Term currentTerm = null;
   Map<String, Term> bindings = new Map<String, Term>();
 
-  void handleBuild(Term t) {
+  void evalBuild(Term t) {
     var m = new Map<String, Term>();
     if(buildPattern.match(t, m)) {
       currentTerm = m["m_t"];
@@ -25,7 +27,7 @@ class gel::Interpreter {
     }
   }
 
-  void handleMatch(Term t) {
+  void evalMatch(Term t) {
     var m = new Map<String, Term>();
     if(matchPattern.match(t, m)) {
       print("Match: ");
@@ -40,7 +42,7 @@ class gel::Interpreter {
     }
   }
 
-  void handleRuleDef(Term t) {
+  void evalRuleDef(Term t) {
     var m = new Map<String, Term>();
     if(rulePattern.match(t, m)) {
       println("Defining rule!");
@@ -49,14 +51,28 @@ class gel::Interpreter {
     }
   }
 
-  void handleShowBindings(Term t) {
+  void evalShowBindings(Term t) {
     var m = new Map<String, Term>();
     if(showBindingsPattern.match(t, m)) {
       println(bindings);
     }
   }
 
-  void handleShowCurrentTerm(Term t) {
+  void evalImport(Term t) {
+    var m = new Map<String, Term>();
+    if(importPattern.match(t, m)) {
+      try {
+        var filename = m["m_fn"].as<StringTerm>.value;
+        var f = new pil::io::ReadFile(filename);
+        var content = f.readAll();
+        handle(content);
+      } catch(Exception e) {
+        println("Could not read file.");
+      }
+    }
+  }
+
+  void evalShowCurrentTerm(Term t) {
     var m = new Map<String, Term>();
     if(showCurrentTermPattern.match(t, m)) {
       println(currentTerm);
@@ -80,7 +96,7 @@ class gel::Interpreter {
     }
   }
 
-  void handleApply(Term t) {
+  void evalApply(Term t) {
     var m = new Map<String, Term>();
     if(t instanceof SymbolTerm) {
       var ruleName = t.as<SymbolTerm>.symbol;
@@ -92,17 +108,32 @@ class gel::Interpreter {
     }
   }
 
+  Term seqPattern = replaceMatchVar(new Parser("m_f1; m_f2").acceptExp(), "m_");
+  void evalSeq(Term t) {
+    var m = new Map<String, Term>();
+    if(seqPattern.match(t, m)) {
+      eval(m["m_f1"]);
+      eval(m["m_f2"]);
+    }
+  }
+
+  void eval(Term t) {
+    evalSeq(t);
+    evalBuild(t);
+    evalMatch(t);
+    evalRuleDef(t);
+    evalApply(t);
+    evalImport(t);
+    evalShowBindings(t);
+    evalShowCurrentTerm(t);
+  }
+
   void handle(String input) {
     var p = new Parser(input);
     var t = p.acceptExp();
     if(t != null) {
       //println(t.toIndentedString(0));
-      handleBuild(t);
-      handleMatch(t);
-      handleRuleDef(t);
-      handleApply(t);
-      handleShowBindings(t);
-      handleShowCurrentTerm(t);
+      eval(t);
     }
   }
 }
@@ -112,14 +143,21 @@ void main(Array<String> args) {
   String input = null;
   println("Welcome to gelly, type :q to quit.");
   var interp = new Interpreter();
+  //interp.handle(":import \"test.g\"");
   while(input != ":q") {
     print("> ");
     input = readln();
     if(input != ":q") {
-      interp.handle(input);
+      println(new Parser(input).acceptExp().toIndentedString(0));
+      //interp.eval(input);
     }
   }
-  //println(replaceMatchVar(new Parser("3 * 8 + m_bla").acceptExp(), "m_").toIndentedString(0));
+  /*
+  println(new Parser("if: 3 == 0").acceptExp().toIndentedString(0));
+  println(new Parser("if 3 + if 8").acceptExp().toIndentedString(0));
+  println(new Parser("say \"Zef\" to: out").acceptExp().toIndentedString(0));
+  println(new Parser("a.b 20 + 8 + 4").acceptExp().toIndentedString(0));
+  */
   /*
   var m = new Map<String, Term>();
   println(t.match(matchTerm, m));
