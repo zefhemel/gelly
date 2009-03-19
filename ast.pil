@@ -65,6 +65,29 @@ class gel::ConsTerm extends gel::Term {
     return s.as<String>;
   }
 
+  Bool ==(Object o) {
+    if(o == null) {
+      return false;
+    }
+    if(o instanceof ConsTerm) {
+      var t = o.as<ConsTerm>;
+      if(t.constructor != constructor) {
+        return false;
+      }
+      if(t.children.length != children.length) {
+        return false;
+      }
+      for(Int i = 0; i < children.length; i++) {
+        if(t.children[i] != children[i]) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   Bool match(Term t, Map<String, Term> bindings) {
     if(t instanceof ConsTerm) {
       var t2 = t.as<ConsTerm>;
@@ -77,16 +100,17 @@ class gel::ConsTerm extends gel::Term {
           return false;
         }
       }
+      if(children.length != t2.children.length) {
+        return false;
+      }
       for(Int i = 0; i < children.length; i++) {
-        if(i < t2.children.length) {
-          if(children[i] instanceof MatchVarTerm) {
-            if(!children[i].match(t2.children[i], bindings)) {
-              return false;
-            }
-          } else {
-            if(!children[i].match(t2.children[i], bindings)) {
-              return false;
-            }
+        if(children[i] instanceof MatchVarTerm) {
+          if(!children[i].match(t2.children[i], bindings)) {
+            return false;
+          }
+        } else {
+          if(!children[i].match(t2.children[i], bindings)) {
+            return false;
           }
         }
       }
@@ -103,6 +127,15 @@ class gel::ConsTerm extends gel::Term {
     }
     var nt = new ConsTerm(type, constructor.construct(bindings), newChildren);
     return nt;
+  }
+
+  ConsTerm clone() {
+    var nc = new Array<Term>(children.length);
+    for(Int i = 0; i < children.length; i++) {
+      nc[i] = children[i];
+    }
+    var n = new ConsTerm(type, constructor, nc);
+    return n;
   }
 
   as<String> {

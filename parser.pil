@@ -38,7 +38,7 @@ class gel::Parser {
     );
 
   List<String> noWhitespaceOps = new List<String>(";", ",", ".");
-  Array<String> prefixOps = new Array<String>("++", "+", "--", "-", "*", "<", ">");
+  Array<String> prefixOps = new Array<String>("++", "+", "--", "-", "*", "<", ">", "?", "!", ":");
 
 
   new(String text) {
@@ -99,10 +99,12 @@ class gel::Parser {
     if(s != null) {
       return new StringTerm(s);
     }
+    /*
     var mv = acceptMatchVar();
     if(mv != null) {
       return new MatchVarTerm(mv);
     }
+    */
     var pe = acceptPrefixExp();
     if(pe != null) {
       return pe;
@@ -348,10 +350,20 @@ class gel::Parser {
     if(i == text.length) {
       return null;
     }
-    if(!accept('?')) {
+    var oldI = i;
+    if(!accept('@')) {
       return null;
     }
-    return acceptIdn();
+    var idn = acceptIdn();
+    if(idn == null) {
+      i = oldI;
+      return null;
+    }
+    if(!accept('@')) {
+      i = oldI;
+      return null;
+    }
+    return idn;
   }
 
   String acceptIdn() {

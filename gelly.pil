@@ -1,22 +1,42 @@
 import "ast.pil"
 import "parser.pil"
 //import "evaluator.pil"
+import "rewrite.pil"
 
 import gel
+import gelly::rewrite
 
 class gel::Interpreter {
-  Term buildPattern = new Parser("build(?t)").acceptExp();
-  Term rulePattern = new Parser("?rn : [ ?lh ] -> [ ?rh ]").acceptExp();
-  Term applyPattern = new Parser("apply(?t)").acceptExp();
+  Term buildPattern = replaceMatchVar(new Parser("![ m_t ]").acceptExp(), "m_");
+  Term matchPattern = replaceMatchVar(new Parser("?[ m_t ]").acceptExp(), "m_");
+  Term rulePattern = replaceMatchVar(new Parser("m_rn : [ m_lh ] -> [ m_rh ]").acceptExp(), "m_");
+  Term showBindingsPattern = new Parser(":bindings").acceptExp();
+  Term showCurrentTermPattern = new Parser(":show").acceptExp();
 
   Map<String, Term> ruleDefs = new Map<String, Term>();
   Term currentTerm = null;
+  Map<String, Term> bindings = new Map<String, Term>();
 
   void handleBuild(Term t) {
     var m = new Map<String, Term>();
     if(buildPattern.match(t, m)) {
-      currentTerm = m["t"];
+      currentTerm = m["m_t"];
       println("Current term set");
+    }
+  }
+
+  void handleMatch(Term t) {
+    var m = new Map<String, Term>();
+    if(matchPattern.match(t, m)) {
+      print("Match: ");
+      var t2 = replaceMatchVar(m["m_t"], "m_");
+      println(t2);
+      if(t2.match(currentTerm, bindings)) {
+        println(currentTerm);
+        println("Current bindings: " + bindings.as<String>);
+      } else {
+        println("Match failed.");
+      }
     }
   }
 
@@ -24,8 +44,22 @@ class gel::Interpreter {
     var m = new Map<String, Term>();
     if(rulePattern.match(t, m)) {
       println("Defining rule!");
-      ruleDefs[m["rn"].as<SymbolTerm>.symbol] = t;
       println(m);
+      ruleDefs[m["m_rn"].as<SymbolTerm>.symbol] = t;
+    }
+  }
+
+  void handleShowBindings(Term t) {
+    var m = new Map<String, Term>();
+    if(showBindingsPattern.match(t, m)) {
+      println(bindings);
+    }
+  }
+
+  void handleShowCurrentTerm(Term t) {
+    var m = new Map<String, Term>();
+    if(showCurrentTermPattern.match(t, m)) {
+      println(currentTerm);
     }
   }
 
@@ -35,8 +69,8 @@ class gel::Interpreter {
       var m = new Map<String, Term>();
       rulePattern.match(rule, m);
       var m2 = new Map<String, Term>();
-      if(m["lh"].match(t, m2)) {
-        currentTerm = m["rh"].construct(m2);
+      if(m["m_lh"].match(t, m2)) {
+        currentTerm = m["m_rh"].construct(m2);
         return currentTerm;
       } else {
         throw new Exception("Could not apply!");
@@ -48,8 +82,8 @@ class gel::Interpreter {
 
   void handleApply(Term t) {
     var m = new Map<String, Term>();
-    if(applyPattern.match(t, m)) {
-      var ruleName = m["t"].as<SymbolTerm>.symbol;
+    if(t instanceof SymbolTerm) {
+      var ruleName = t.as<SymbolTerm>.symbol;
       try {
         println(apply(ruleName, currentTerm));
       } catch(Exception e) {
@@ -61,17 +95,22 @@ class gel::Interpreter {
   void handle(String input) {
     var p = new Parser(input);
     var t = p.acceptExp();
-    println(t.toIndentedString(0));
-    handleBuild(t);
-    handleRuleDef(t);
-    handleApply(t);
+    if(t != null) {
+      //println(t.toIndentedString(0));
+      handleBuild(t);
+      handleMatch(t);
+      handleRuleDef(t);
+      handleApply(t);
+      handleShowBindings(t);
+      handleShowCurrentTerm(t);
+    }
   }
 }
 
 void main(Array<String> args) {
   //evalInit();
   String input = null;
-  println("Welcome to zisp, type :q to quit.");
+  println("Welcome to gelly, type :q to quit.");
   var interp = new Interpreter();
   while(input != ":q") {
     print("> ");
@@ -80,10 +119,7 @@ void main(Array<String> args) {
       interp.handle(input);
     }
   }
-  /*
-  println(new Parser("3   * 8").acceptExp().toIndentedString(0));
-  println(new Parser("rule : [ 10 ] -> [ 20 ]").acceptExp().toIndentedString(0));
-  */
+  //println(replaceMatchVar(new Parser("3 * 8 + m_bla").acceptExp(), "m_").toIndentedString(0));
   /*
   var m = new Map<String, Term>();
   println(t.match(matchTerm, m));
