@@ -264,15 +264,15 @@ class gel::Parser {
   String acceptOps(Array<String> ops) {
     for(String op : ops) {
       if(lookAhead(op)) {
-        var ops = new MutableString(op);
+        var opstr = new MutableString(op);
         var oldI = i;
         i = i + op.length;
         while(allOps.contains(text[i])) {
-          ops.append(text[i]);
+          opstr.append(text[i]);
           i++;
         }
-        if(text[i-1] != '=' || ops.as<String> == op) {
-          return ops.as<String>;
+        if(text[i-1] != '=' || opstr.as<String> == op) {
+          return opstr.as<String>;
         } else {
           i = oldI;
         }
