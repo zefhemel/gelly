@@ -1,12 +1,22 @@
 import "ast.pil"
+import "parser.pil"
 import "utils.pil"
+import "/Users/zef/svn/pil/src/lib/io.pil"
 
 import gel
 import gelly::utils
 import gelly::rewrite
 
-class gelly::rewrite::FailException extends Exception {
-}
+Array<Function2<Bool, Term, Interpreter>> gelly::rewrite::primitives = new Array<Function2<Bool, Term, Interpreter>>(
+  Bool(Term t, Interpreter i) { gelly::rewrite::prim::apply(t, i) },
+  Bool(Term t, Interpreter i) { gelly::rewrite::prim::import(t, i) },
+  Bool(Term t, Interpreter i) { gelly::rewrite::prim::strategyDef(t, i) },
+  Bool(Term t, Interpreter i) { gelly::rewrite::prim::seq(t, i) },
+  Bool(Term t, Interpreter i) { gelly::rewrite::prim::build(t, i) },
+  Bool(Term t, Interpreter i) { gelly::rewrite::prim::match(t, i) }
+);
+
+
 
 Term gelly::rewrite::replaceMatchVar(Term t, String idnPrefix) {
   if(t instanceof SymbolTerm && stringStartsWith(t.as<SymbolTerm>.symbol, idnPrefix)) {
@@ -23,25 +33,27 @@ Term gelly::rewrite::replaceMatchVar(Term t, String idnPrefix) {
   return t;
 }
 
-Term gelly::rewrite::apply(Function1<Term, Term> str, Term t) {
-  return str(t);
-}
 
-Term gelly::rewrite::try(Function1<Term, Term> str, Term t) {
-  try {
-    return str(t);
-  }
-  catch(FailException fe) {
-    return t;
-  }
-}
+class gelly::rewrite::Interpreter {
+  Term currentTerm = new EmptyTerm();
+  Map<String, Term> bindings = new Map<String, Term>();
+  Map<String, Term> strategies = new Map<String, Term>();
 
-Term gelly::rewrite::all(Function1<Term, Term> str, Term t) {
-  if(t instanceof ConsTerm) {
-    var trm = t.as<ConsTerm>;
-    try {
-
+  Bool eval(Term t) {
+    for(Function2<Bool, Term, Interpreter> f : primitives) {
+      if(f(t, this)) {
+        return true;
+      }
     }
+    return false;
+  }
+
+  Bool evalString(String input) {
+    var p = new Parser(input);
+    var t = p.acceptExp();
+    if(t != null) {
+      return eval(t);
+    }
+    return false;
   }
 }
-
