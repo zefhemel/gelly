@@ -26,19 +26,20 @@ class gel::Parser {
   Array<Array<String>> operators = new Array<Array<String>>(
     new Array<String>("."),
     new Array<String>("*", "/", "%"),
-    new Array<String>("+>", "+", "->", "-"),
-    new Array<String>("<+", "<=", "<", ">=", ">"),
-    new Array<String>("!=", "!", "==", "="),
-    new Array<String>("&&", "&"),
-    new Array<String>("||", "|"),
-    new Array<String>("::", "?", ":", "$"),
+    new Array<String>("+", "-"),
+    new Array<String>("<", "<=", ">", ">="),
+    new Array<String>("!",  "=", "+=", "-=", "*="),
+    new Array<String>("&"),
+    new Array<String>("|"),
+    new Array<String>("?", ":", "$"),
     new Array<String>(","),
     new Array<String>("keyword"),
     new Array<String>(";")
     );
 
   List<String> noWhitespaceOps = new List<String>(";", ",", ".");
-  Array<String> prefixOps = new Array<String>("++", "+", "--", "-", "*", "<", ">", "?", "!", ":");
+  List<Char> allOps = new List<Char>('!', '@', '#', '$', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?');
+  Array<String> prefixOps = new Array<String>("+", "-", "*", "<", ">", "?", "!", ":");
 
 
   new(String text) {
@@ -55,8 +56,8 @@ class gel::Parser {
       acceptWhiteSpace();
       oldI = i;
     }
-    var exp = acceptExp();
-    //var exp = acceptGeneric(followLevel);
+    //var exp = acceptExp();
+    var exp = acceptGeneric(followLevel);
     if(exp == null) {
       i = oldI;
       return t;
@@ -65,8 +66,8 @@ class gel::Parser {
       oldI = i;
       acceptWhiteSpace();
       t = new ConsTerm(0, new SymbolTerm("_"), new Array<Term>(t, exp));
-      exp = acceptExp();
-      //exp = acceptGeneric(followLevel);
+      //exp = acceptExp();
+      exp = acceptGeneric(followLevel);
       if(exp == null) {
         i = oldI;
         return t;
@@ -262,14 +263,19 @@ class gel::Parser {
 
   String acceptOps(Array<String> ops) {
     for(String op : ops) {
-      /*if(op == "keyword") {
-        var kw = acceptKeyword();
-        if(kw != null) {
-          return kw;
-        }
-      } else*/ if(lookAhead(op)) {
+      if(lookAhead(op)) {
+        var ops = new MutableString(op);
+        var oldI = i;
         i = i + op.length;
-        return op;
+        while(allOps.contains(text[i])) {
+          ops.append(text[i]);
+          i++;
+        }
+        if(text[i-1] != '=' || ops.as<String> == op) {
+          return ops.as<String>;
+        } else {
+          i = oldI;
+        }
       }
     }
     return null;
