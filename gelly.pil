@@ -12,9 +12,9 @@ void main(Array<String> args) {
   //evalInit();
   String input = null;
   println("Welcome to gelly, type :q to quit.");
-  var interp = new Interpreter();
-  if(interp.evalString(":import \"test.g\"")) {
-    println(interp.currentTerm.toIndentedString(0));
+  var s = new Strategy(new Map<String, StrategyDef>(), new Map<String, Term>());
+  if(s.evalString(":import \"test.g\"")) {
+    println(s.currentTerm.toIndentedString(0));
   } else {
     println("Rewriting failed.");
   }

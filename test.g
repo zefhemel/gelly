@@ -1,11 +1,13 @@
-simplify {
-  ?[ m_x * 1 ]
-  ; ![ m_x ]
+strategy simplify()[] {
+  ?[ m_x * 1 ];
+  ![ m_x ]
 };
-simplify2 {
-  ?[ m_x * 0 ]
-  ; ![ 0 ]
+strategy try(s)[] {
+  s <+ id
 };
-![ 8 * 3 * 0 * 1 ];
-simplify;
-simplify2
+strategy repeat(s)[] {
+  debug;
+  try(s; repeat(s))
+};
+![ 8 * 3 * 1 * 1 * 1 * 1];
+repeat(simplify)

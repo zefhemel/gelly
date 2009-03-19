@@ -7,13 +7,14 @@ import gel
 import gelly::utils
 import gelly::rewrite
 
-Array<Function2<Bool, Term, Interpreter>> gelly::rewrite::primitives = new Array<Function2<Bool, Term, Interpreter>>(
-  Bool(Term t, Interpreter i) { gelly::rewrite::prim::apply(t, i) },
-  Bool(Term t, Interpreter i) { gelly::rewrite::prim::import(t, i) },
-  Bool(Term t, Interpreter i) { gelly::rewrite::prim::strategyDef(t, i) },
-  Bool(Term t, Interpreter i) { gelly::rewrite::prim::seq(t, i) },
-  Bool(Term t, Interpreter i) { gelly::rewrite::prim::build(t, i) },
-  Bool(Term t, Interpreter i) { gelly::rewrite::prim::match(t, i) }
+Array<Function2<Bool, Term, Strategy>> gelly::rewrite::primitives = new Array<Function2<Bool, Term, Strategy>>(
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyCall(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::import(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyDef(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::seq(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::leftChoice(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::build(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::match(t, i) }
 );
 
 
@@ -32,18 +33,47 @@ Term gelly::rewrite::replaceMatchVar(Term t, String idnPrefix) {
   return t;
 }
 
+class gelly::rewrite::CouldNotInterpretException extends Exception {
+  Term t = null;
+  new(Term t) {
+    this.t = t;
+  }
 
-class gelly::rewrite::Interpreter {
+  as<String> {
+    return "Could not interpret: " + t.as<String>;
+  }
+}
+
+class gelly::rewrite::StrategyDef {
+  Term t = null;
+  Array<String> strArgs = null;
+
+  new(Array<String> strArgs, Term t) {
+    this.strArgs = strArgs;
+    this.t = t;
+  }
+}
+
+class gelly::rewrite::Strategy {
   Term currentTerm = new EmptyTerm();
-  Map<String, Term> bindings = new Map<String, Term>();
-  Map<String, Term> strategies = new Map<String, Term>();
+  Map<String, Term> bindings = null;
+  Map<String, StrategyDef> strategies = null;
+
+  new(Map<String, StrategyDef> strategies, Map<String, Term> bindings) {
+    this.strategies = strategies;
+    this.bindings = bindings;
+  }
 
   Bool eval(Term t) {
-    for(Function2<Bool, Term, Interpreter> f : primitives) {
+    if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "()") {
+      t = t.as<ConsTerm>.children[0];
+    }
+    for(Function2<Bool, Term, Strategy> f : primitives) {
       if(f(t, this)) {
         return true;
       }
     }
+    //throw new CouldNotInterpretException(t);
     return false;
   }
 
