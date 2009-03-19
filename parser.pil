@@ -51,7 +51,7 @@ class gel::Parser {
     if(!acceptWhiteSpace()) { // Postfix
       var op = acceptOps(prefixOps);
       if(op != null) {
-        t = new ConsTerm(2, new SymbolTerm(op), new Array<Term>(t));
+        t = new ConsTerm(2, op, new Array<Term>(t));
       }
       acceptWhiteSpace();
       oldI = i;
@@ -65,7 +65,7 @@ class gel::Parser {
     while(exp != null) {
       oldI = i;
       acceptWhiteSpace();
-      t = new ConsTerm(0, new SymbolTerm("_"), new Array<Term>(t, exp));
+      t = new ConsTerm(0, "_", new Array<Term>(t, exp));
       //exp = acceptExp();
       exp = acceptGeneric(followLevel);
       if(exp == null) {
@@ -117,21 +117,21 @@ class gel::Parser {
       var exp = acceptExp();
       acceptWhiteSpace();
       expect(')');
-      return new ConsTerm(0, new SymbolTerm("()"), new Array<Term>(valueOrEmpty(exp)));
+      return new ConsTerm(0, "()", new Array<Term>(valueOrEmpty(exp)));
     }
     if(accept('[')) {
       acceptWhiteSpace();
       var exp = acceptExp();
       acceptWhiteSpace();
       expect(']');
-      return new ConsTerm(0, new SymbolTerm("[]"), new Array<Term>(valueOrEmpty(exp)));
+      return new ConsTerm(0, "[]", new Array<Term>(valueOrEmpty(exp)));
     }
     if(accept('{')) {
       acceptWhiteSpace();
       var exp = acceptExp();
       acceptWhiteSpace();
       expect('}');
-      return new ConsTerm(0, new SymbolTerm("{}"), new Array<Term>(valueOrEmpty(exp)));
+      return new ConsTerm(0, "{}", new Array<Term>(valueOrEmpty(exp)));
     }
     return null;
   }
@@ -143,7 +143,7 @@ class gel::Parser {
     }
     var t = acceptFactor(); //acceptGeneric(0);
     if(t != null) {
-      return new ConsTerm(1, new SymbolTerm(op), new Array<Term>(t));
+      return new ConsTerm(1, op, new Array<Term>(t));
     } else {
       return null;
     }
@@ -160,8 +160,8 @@ class gel::Parser {
     acceptWhiteSpace();
     var t = acceptGeneric(keywordLevel - 1);
     if(t != null) {
-      //return followFactor(new ConsTerm(1, new SymbolTerm(kw), new Array<Term>(t)));
-      return new ConsTerm(1, new SymbolTerm(kw), new Array<Term>(t));
+      //return followFactor(new ConsTerm(1, kw, new Array<Term>(t)));
+      return new ConsTerm(1, kw, new Array<Term>(t));
     } else {
       i = oldI;
       return null;
@@ -209,7 +209,7 @@ class gel::Parser {
       } else {
         t2 = acceptGeneric(level-1);
       }
-      t = new ConsTerm(0, new SymbolTerm(op), new Array<Term>(t, valueOrEmpty(t2)));
+      t = new ConsTerm(0, op, new Array<Term>(t, valueOrEmpty(t2)));
       oldI = i;
       if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
         i = oldI;

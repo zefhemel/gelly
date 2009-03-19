@@ -24,7 +24,6 @@ Term gelly::rewrite::replaceMatchVar(Term t, String idnPrefix) {
   } else if(t instanceof ConsTerm) {
     var t2 = t.as<ConsTerm>;
     var ct = t2.clone();
-    ct.constructor = replaceMatchVar(ct.constructor, idnPrefix);
     for(Int i = 0; i < ct.children.length; i++) {
       ct.children[i] = replaceMatchVar(ct.children[i], idnPrefix);
     }

@@ -28,11 +28,11 @@ String gel::util::spaces(Int n) {
 }
 
 class gel::ConsTerm extends gel::Term {
-  Term constructor = null;
+  String constructor = null;
   Array<Term> children = null;
   Int type = 0; // 0 = infix, 1 = prefix, 2 = postfix
 
-  new(Int type, gel::Term constructor, Array<gel::Term> children) {
+  new(Int type, String constructor, Array<Term> children) {
     this.type = type;
     this.constructor = constructor;
     this.children = children;
@@ -47,7 +47,7 @@ class gel::ConsTerm extends gel::Term {
     } else if(type == 2){
       s.append("postfix:");
     }
-    s.append(constructor.as<String>);
+    s.append(constructor);
     var sawCons = false;
     for(gel::Term t : children) {
       if(t instanceof ConsTerm) {
@@ -92,11 +92,11 @@ class gel::ConsTerm extends gel::Term {
     if(t instanceof ConsTerm) {
       var t2 = t.as<ConsTerm>;
       if(constructor instanceof MatchVarTerm) {
-        if(!constructor.match(t2.constructor, bindings)) {
+        if(constructor != t2.constructor) {
           return false;
         }
       } else {
-        if(!constructor.match(t2.constructor, bindings)) {
+        if(constructor != t2.constructor) {
           return false;
         }
       }
@@ -125,7 +125,7 @@ class gel::ConsTerm extends gel::Term {
     for(Int i = 0; i < children.length; i++) {
       newChildren[i] = children[i].construct(bindings);
     }
-    var nt = new ConsTerm(type, constructor.construct(bindings), newChildren);
+    var nt = new ConsTerm(type, constructor, newChildren);
     return nt;
   }
 
@@ -140,7 +140,7 @@ class gel::ConsTerm extends gel::Term {
 
   as<String> {
     var s = new MutableString("(");
-    s.append(constructor.as<String>);
+    s.append(constructor);
     s.append(' ');
     for(gel::Term t : children) {
       s.append(t.as<String>);
