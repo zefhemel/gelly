@@ -35,10 +35,14 @@ class gelly::rewrite::CouldNotInterpretException extends Exception {
 
 class gelly::rewrite::StrategyDef {
   Term t = null;
-  Array<String> strArgs = null;
+  String strArgName = null;
+  String valArgName = null;
+  Bool valArgPassByValue = true;
 
-  new(Array<String> strArgs, Term t) {
-    this.strArgs = strArgs;
+  new(String strArgName, String valArgName, Bool valArgPassByValue, Term t) {
+    this.strArgName = strArgName;
+    this.valArgName = valArgName;
+    this.valArgPassByValue = valArgPassByValue;
     this.t = t;
   }
 }
@@ -69,6 +73,8 @@ class gelly::rewrite::Strategy {
   Bool eval(Term t) {
     if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "()") {
       t = t.as<ConsTerm>.children[0];
+    } else if(t instanceof EmptyTerm) {
+      return true;
     }
     for(Function2<Bool, Term, Strategy> f : primitiveConstructs) {
       if(f(t, this)) {

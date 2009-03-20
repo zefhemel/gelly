@@ -42,13 +42,21 @@ Bool gelly::rewrite::prim::strategyDef(Term t, Strategy i) {
       return false;
     }
     String name = m["m_name"].as<SymbolTerm>.symbol;
-    Array<String> strArgs = null;
-    if(m["m_strparam"] instanceof EmptyTerm) {
-      strArgs = new Array<String>();
-    } else {
-      strArgs = new Array<String>(m["m_strparam"].as<SymbolTerm>.symbol);
+    String strArgName = null;
+    String valArgName = null;
+    Bool valArgPassByValue = true;
+    if(!(m["m_strparam"] instanceof EmptyTerm)) {
+      strArgName = m["m_strparam"].as<SymbolTerm>.symbol;
     }
-    i.strategies[name] = new StrategyDef(strArgs, m["m_steps"]);
+    if(!(m["m_valparam"] instanceof EmptyTerm)) {
+      if(m["m_valparam"] instanceof SymbolTerm) {
+        valArgName = m["m_valparam"].as<SymbolTerm>.symbol;
+      } else {
+        valArgName = m["m_valparam"].as<ConsTerm>.children[0].as<SymbolTerm>.symbol;
+        valArgPassByValue = false;
+      }
+    }
+    i.strategies[name] = new StrategyDef(strArgName, valArgName, valArgPassByValue, m["m_steps"]);
     println("Defined " + name + " strategy.");
     return true;
   }
@@ -105,18 +113,25 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
   } else {
     return false;
   }
-  var ruleName = m["m_name"].as<SymbolTerm>.symbol;
-  if(ruleName == "debug") {
+  var strategyName = m["m_name"].as<SymbolTerm>.symbol;
+  if(strategyName == "debug") {
     if(!(m["m_valparam"] instanceof EmptyTerm)) {
       print(m["m_valparam"]);
     }
     println(i.currentTerm);
     return true;
-  } else if(ruleName == "id") {
+  } else if(strategyName == "id") {
     return true;
-  } else if(ruleName == "fail") {
+  } else if(strategyName == "fail") {
     return false;
-  } else if(ruleName == "all" || ruleName == "one") {
+  } else if(strategyName == "eval") {
+    var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), new Map<String, Term>());
+    newStr.currentTerm = i.currentTerm;
+    if(!newStr.eval(m["m_valparam"])) {
+      return false;
+    }
+    return i.eval(newStr.currentTerm);
+  } else if(strategyName == "all" || strategyName == "one") {
     if(i.currentTerm instanceof ConsTerm) {
       var stratT = m["m_strparam"];
       var successful = true;
@@ -124,9 +139,9 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
       var oldCurrentTerm = i.currentTerm;
       for(Int j = 0; j < newT.children.length; j++) {
         i.currentTerm = newT.children[j];
-        if(ruleName == "all") {
+        if(strategyName == "all") {
           successful = successful && gelly::rewrite::prim::strategyCall(stratT, i);
-        } else if(ruleName == "one") {
+        } else if(strategyName == "one") {
           if(gelly::rewrite::prim::strategyCall(stratT, i)) {
             newT.children[j] = i.currentTerm;
             i.currentTerm = newT;
@@ -146,19 +161,30 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
         i.currentTerm = oldCurrentTerm;
         return false;
       }
-    } else if(ruleName == "one") { // One fails on non-cons terms
+    } else if(strategyName == "one") { // One fails on non-cons terms
       return false;
     } else {
       return true;
     }
   } else {
-    if(i.strategies.contains(ruleName)) {
-      var str = i.strategies[ruleName];
-      var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), i.bindings.clone()); //new Map<String, Term>());
+    if(i.strategies.contains(strategyName)) {
+      var str = i.strategies[strategyName];
+      var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), new Map<String, Term>()); //i.bindings.clone()); //new Map<String, Term>());
       newStr.currentTerm = i.currentTerm;
-      Array<StrArgStrategy> strArgs = null;
       if(!(m["m_strparam"] instanceof EmptyTerm)) {
-        newStr.closureStrategies[str.strArgs[0]] = new ClosureStrategyDef(i, m["m_strparam"]);
+        newStr.closureStrategies[str.strArgName] = new ClosureStrategyDef(i, m["m_strparam"]);
+      }
+      if(!(m["m_valparam"] instanceof EmptyTerm)) {
+        if(str.valArgPassByValue) {
+          var oldT = i.currentTerm;
+          if(!i.eval(m["m_valparam"])) {
+            return false;
+          }
+          newStr.bindings[str.valArgName] = i.currentTerm;
+          i.currentTerm = oldT;
+        } else {
+          newStr.bindings[str.valArgName] = m["m_valparam"];
+        }
       }
       if(newStr.eval(str.t)) {
         i.currentTerm = newStr.currentTerm;
@@ -166,17 +192,18 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
       } else {
         return false;
       }
-    } else if(i.closureStrategies.contains(ruleName)) {
-      ClosureStrategyDef str = i.closureStrategies[ruleName];
+    } else if(i.closureStrategies.contains(strategyName)) {
+      ClosureStrategyDef str = i.closureStrategies[strategyName];
       var newStr = new Strategy(str.parent.strategies, str.parent.closureStrategies, str.parent.bindings);
       newStr.currentTerm = i.currentTerm;
-      Array<StrArgStrategy> strArgs = null;
       if(newStr.eval(str.t)) {
         i.currentTerm = newStr.currentTerm;
         return true;
       } else {
         return false;
       }
+    } else {
+      println("No such strategy: " + strategyName);
     }
   }
   return false;
