@@ -235,8 +235,21 @@ class gel::Parser {
 
   Bool acceptWhiteSpace() {
     var oldI = i;
-    while(i < text.length && (text[i] == ' ' || text[i] == '\t' || text[i] == '\n' || text[i] == '\r')) { 
-      i++;
+    while(i < text.length && (text[i] == ' ' || text[i] == '\t' || text[i] == '\n' || text[i] == '\r' || lookAhead("//") || lookAhead("/*"))) { 
+      if(lookAhead("//")) {
+        while(i < text.length && text[i] != '\n' && text[i] != '\r') {
+          i++;
+        }
+      } else if(lookAhead("/*")) {
+        while(i < text.length && !lookAhead("*/")) {
+          i++;
+        }
+        if(lookAhead("*/")) {
+          i = i + 2;
+        }
+      } else {
+        i++;
+      }
     }
     return oldI != i;
   }
