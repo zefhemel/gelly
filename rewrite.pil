@@ -8,14 +8,16 @@ import gel
 import gelly::utils
 import gelly::rewrite
 
-Term gelly::rewrite::replaceMatchVar(Term t, String idnPrefix) {
-  if(t instanceof SymbolTerm && stringStartsWith(t.as<SymbolTerm>.symbol, idnPrefix)) {
-    return new MatchVarTerm(t.as<SymbolTerm>.symbol);
+Term gelly::rewrite::replaceMatchVar(Term t) {
+  //if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "$" && t.as<ConsTerm>.type == 2 && t.as<ConsTerm>.children[0] instanceof ConsTerm && t.as<ConsTerm>.children[0].as<ConsTerm>.constructor == "$") {
+  if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "$" && t.as<ConsTerm>.type == 1) {
+    //return new MatchVarTerm(t.as<ConsTerm>.children[0].as<ConsTerm>.children[0].as<SymbolTerm>.symbol);
+    return new MatchVarTerm(t.as<ConsTerm>.children[0].as<SymbolTerm>.symbol);
   } else if(t instanceof ConsTerm) {
     var t2 = t.as<ConsTerm>;
     var ct = t2.clone();
     for(Int i = 0; i < ct.children.length; i++) {
-      ct.children[i] = replaceMatchVar(ct.children[i], idnPrefix);
+      ct.children[i] = replaceMatchVar(ct.children[i]);
     }
     return ct;
   }

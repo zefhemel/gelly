@@ -1,47 +1,47 @@
 import "simple.g";
 
 strategy gelly-sugar-rule-def()[] {
-  ?[ rule m_name : [ m_lh ] -> [ m_rh ] ]
-  ; ![ strategy m_name()[] { 
-         ?[ m_lh ]
-         ; ![ m_rh ] 
+  ?[ rule $name : [ $lh ] -> [ $rh ] ]
+  ; ![ strategy $name()[] { 
+         ?[ $lh ]
+         ; ![ $rh ] 
        } 
      ]
 };
 
 strategy gelly-sugar-rule-where-def()[] {
-  ?[ rule m_name : [ m_lh ] -> [ m_rh ] where { m_where } ]
-  ; ![ strategy m_name()[] { 
-         ?[ m_lh ]
-         ; where(m_where)
-         ; ![ m_rh ] 
+  ?[ rule $name : [ $lh ] -> [ $rh ] where { $where } ]
+  ; ![ strategy $name()[] { 
+         ?[ $lh ]
+         ; where($where)
+         ; ![ $rh ] 
        } 
      ]
 };
 
 strategy gelly-sugar-strategy-simple()[] {
-  ?[ strategy m_name { m_body } ]
-  ; ![ strategy m_name()[] { m_body } ]
+  ?[ strategy $name { $body } ]
+  ; ![ strategy $name()[] { $body } ]
 };
 
 strategy gelly-sugar-strategy-application()[] {
-  ?[ <m_str> m_t ]
-  ; ![ m_t; m_str ]
+  ?[ <$str> $t ]
+  ; ![ $t; $str ]
 };
 
 strategy gelly-sugar-strategy-application2()[] {
-  ?[ <(m_str)> m_t ]
-  ; ![ m_t; m_str ]
+  ?[ <($str)> $t ]
+  ; ![ $t; $str ]
 };
 
 strategy gelly-sugar-binding()[] {
-  ?[ m_lhs := m_rhs ]
-  ; ![ m_rhs; ?[ m_lhs ] ]
+  ?[ $lhs := $rhs ]
+  ; ![ $rhs; ?[ $lhs ] ]
 };
 
-strategy main()[:m_p] {
-  ?[ m_t ]
-  ; ![ m_p ]
+strategy main()[:p] {
+  ?[ $t ]
+  ; ![ $p ]
   ; innermost(
          gelly-sugar-rule-where-def
       <+ gelly-sugar-rule-def
@@ -50,7 +50,7 @@ strategy main()[:m_p] {
       <+ gelly-sugar-strategy-application
       <+ gelly-sugar-strategy-application2
     )
-  ; ?[ m_p2 ]
-  ; ![ m_t ]
-  ; eval[ ![ m_p2 ] ]
+  ; ?[ $p2 ]
+  ; ![ $t ]
+  ; eval[ ![ $p2 ] ]
 };

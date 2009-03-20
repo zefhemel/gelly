@@ -4,16 +4,16 @@ import "rewrite.pil"
 import gel
 import gelly::rewrite
 
-Term gelly::rewrite::buildPattern = replaceMatchVar(new Parser("![ m_t ]").acceptExp(), "m_");
-Term gelly::rewrite::matchPattern = replaceMatchVar(new Parser("?[ m_t ]").acceptExp(), "m_");
-Term gelly::rewrite::importPattern = replaceMatchVar(new Parser("import m_fn").acceptExp(), "m_");
-Term gelly::rewrite::seqPattern = replaceMatchVar(new Parser("m_f1; m_f2").acceptExp(), "m_");
-Term gelly::rewrite::leftChoicePattern = replaceMatchVar(new Parser("m_f1 <+ m_f2").acceptExp(), "m_");
-Term gelly::rewrite::strategyDefPattern = replaceMatchVar(new Parser("strategy m_name (m_strparam)[m_valparam] { m_steps }").acceptExp(), "m_");
-Term gelly::rewrite::strategyCallPattern = replaceMatchVar(new Parser("m_name(m_strparam)[m_valparam]").acceptExp(), "m_");
-Term gelly::rewrite::strategyCallNoStrParamPattern = replaceMatchVar(new Parser("m_name[m_valparam]").acceptExp(), "m_");
-Term gelly::rewrite::strategyCallNoValParamPattern = replaceMatchVar(new Parser("m_name(m_strparam)").acceptExp(), "m_");
-Term gelly::rewrite::strategyCallNoStrParamNoValParamPattern = replaceMatchVar(new Parser("m_name").acceptExp(), "m_");
+Term gelly::rewrite::buildPattern = replaceMatchVar(new Parser("![ $t ]").acceptExp());
+Term gelly::rewrite::matchPattern = replaceMatchVar(new Parser("?[ $t ]").acceptExp());
+Term gelly::rewrite::importPattern = replaceMatchVar(new Parser("import $fn").acceptExp());
+Term gelly::rewrite::seqPattern = replaceMatchVar(new Parser("$f1; $f2").acceptExp());
+Term gelly::rewrite::leftChoicePattern = replaceMatchVar(new Parser("$f1 <+ $f2").acceptExp());
+Term gelly::rewrite::strategyDefPattern = replaceMatchVar(new Parser("strategy $name ($strparam)[$valparam] { $steps }").acceptExp());
+Term gelly::rewrite::strategyCallPattern = replaceMatchVar(new Parser("$name$($strparam)[$valparam]").acceptExp());
+Term gelly::rewrite::strategyCallNoStrParamPattern = replaceMatchVar(new Parser("$name[$valparam]").acceptExp());
+Term gelly::rewrite::strategyCallNoValParamPattern = replaceMatchVar(new Parser("$name($strparam)").acceptExp());
+Term gelly::rewrite::strategyCallNoStrParamNoValParamPattern = replaceMatchVar(new Parser("$name").acceptExp());
 
 Array<Function2<Bool, Term, Strategy>> gelly::rewrite::primitiveConstructs = new Array<Function2<Bool, Term, Strategy>>(
   Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyCall(t, i) },
@@ -28,7 +28,7 @@ Array<Function2<Bool, Term, Strategy>> gelly::rewrite::primitiveConstructs = new
 Bool gelly::rewrite::prim::build(Term t, Strategy i) {
   var m = new Map<String, Term>();
   if(buildPattern.match(t, m)) {
-    i.currentTerm = replaceMatchVar(m["m_t"], "m_").construct(i.bindings);
+    i.currentTerm = replaceMatchVar(m["t"]).construct(i.bindings);
     return true;
   } else {
     return false;
@@ -38,25 +38,25 @@ Bool gelly::rewrite::prim::build(Term t, Strategy i) {
 Bool gelly::rewrite::prim::strategyDef(Term t, Strategy i) {
   var m = new Map<String, Term>();
   if(strategyDefPattern.match(t, m)) {
-    if(!(m["m_name"] instanceof SymbolTerm)) {
+    if(!(m["name"] instanceof SymbolTerm)) {
       return false;
     }
-    String name = m["m_name"].as<SymbolTerm>.symbol;
+    String name = m["name"].as<SymbolTerm>.symbol;
     String strArgName = null;
     String valArgName = null;
     Bool valArgPassByValue = true;
-    if(!(m["m_strparam"] instanceof EmptyTerm)) {
-      strArgName = m["m_strparam"].as<SymbolTerm>.symbol;
+    if(!(m["strparam"] instanceof EmptyTerm)) {
+      strArgName = m["strparam"].as<SymbolTerm>.symbol;
     }
-    if(!(m["m_valparam"] instanceof EmptyTerm)) {
-      if(m["m_valparam"] instanceof SymbolTerm) {
-        valArgName = m["m_valparam"].as<SymbolTerm>.symbol;
+    if(!(m["valparam"] instanceof EmptyTerm)) {
+      if(m["valparam"] instanceof SymbolTerm) {
+        valArgName = m["valparam"].as<SymbolTerm>.symbol;
       } else {
-        valArgName = m["m_valparam"].as<ConsTerm>.children[0].as<SymbolTerm>.symbol;
+        valArgName = m["valparam"].as<ConsTerm>.children[0].as<SymbolTerm>.symbol;
         valArgPassByValue = false;
       }
     }
-    i.strategies[name] = new StrategyDef(strArgName, valArgName, valArgPassByValue, m["m_steps"]);
+    i.strategies[name] = new StrategyDef(strArgName, valArgName, valArgPassByValue, m["steps"]);
     return true;
   }
   return false;
@@ -83,10 +83,10 @@ Bool gelly::rewrite::prim::seq(Term t, Strategy i) {
 Bool gelly::rewrite::prim::leftChoice(Term t, Strategy i) {
   var m = new Map<String, Term>();
   if(leftChoicePattern.match(t, m)) {
-    if(i.eval(m["m_f1"])) {
+    if(i.eval(m["f1"])) {
       return true;
     } else {
-      return i.eval(m["m_f2"]);
+      return i.eval(m["f2"]);
     }
   }
   return false;
@@ -105,13 +105,13 @@ class gelly::rewrite::StrArgStrategy {
 Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
   var m = new Map<String, Term>();
   if(strategyCallNoStrParamPattern.match(t, m)) {
-    m["m_strparam"] = new EmptyTerm();
+    m["strparam"] = new EmptyTerm();
   } else if(strategyCallNoValParamPattern.match(t, m)) {
-    m["m_valparam"] = new EmptyTerm();
+    m["valparam"] = new EmptyTerm();
   } else if(strategyCallNoStrParamNoValParamPattern.match(t, m)) {
-    if(m["m_name"] instanceof SymbolTerm) {
-      m["m_valparam"] = new EmptyTerm();
-      m["m_strparam"] = new EmptyTerm();
+    if(m["name"] instanceof SymbolTerm) {
+      m["valparam"] = new EmptyTerm();
+      m["strparam"] = new EmptyTerm();
     } else {
       return false;
     }
@@ -120,10 +120,10 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
   } else {
     return false;
   }
-  var strategyName = m["m_name"].as<SymbolTerm>.symbol;
+  var strategyName = m["name"].as<SymbolTerm>.symbol;
   if(strategyName == "debug") {
-    if(!(m["m_valparam"] instanceof EmptyTerm)) {
-      print(m["m_valparam"]);
+    if(!(m["valparam"] instanceof EmptyTerm)) {
+      print(m["valparam"]);
     }
     println(i.currentTerm);
     return true;
@@ -134,13 +134,13 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
   } else if(strategyName == "eval") {
     var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), i.bindings.clone());
     newStr.currentTerm = i.currentTerm;
-    if(!newStr.eval(m["m_valparam"])) {
+    if(!newStr.eval(m["valparam"])) {
       return false;
     }
     return i.eval(newStr.currentTerm);
   } else if(strategyName == "all" || strategyName == "one") {
     if(i.currentTerm instanceof ConsTerm) {
-      var stratT = m["m_strparam"];
+      var stratT = m["strparam"];
       var successful = true;
       var newT = i.currentTerm.as<ConsTerm>.clone();
       var oldCurrentTerm = i.currentTerm;
@@ -178,19 +178,19 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
       var str = i.strategies[strategyName];
       var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), new Map<String, Term>()); //i.bindings.clone()); //new Map<String, Term>());
       newStr.currentTerm = i.currentTerm;
-      if(!(m["m_strparam"] instanceof EmptyTerm)) {
-        newStr.closureStrategies[str.strArgName] = new ClosureStrategyDef(i, m["m_strparam"]);
+      if(!(m["strparam"] instanceof EmptyTerm)) {
+        newStr.closureStrategies[str.strArgName] = new ClosureStrategyDef(i, m["strparam"]);
       }
-      if(!(m["m_valparam"] instanceof EmptyTerm)) {
+      if(!(m["valparam"] instanceof EmptyTerm)) {
         if(str.valArgPassByValue) {
           var oldT = i.currentTerm;
-          if(!i.eval(m["m_valparam"])) {
+          if(!i.eval(m["valparam"])) {
             return false;
           }
           newStr.bindings[str.valArgName] = i.currentTerm;
           i.currentTerm = oldT;
         } else {
-          newStr.bindings[str.valArgName] = m["m_valparam"];
+          newStr.bindings[str.valArgName] = m["valparam"];
         }
       }
       if(newStr.eval(str.t)) {
@@ -219,7 +219,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
 Bool gelly::rewrite::prim::match(Term t, Strategy i) {
   var m = new Map<String, Term>();
   if(matchPattern.match(t, m)) {
-    var t2 = replaceMatchVar(m["m_t"], "m_");
+    var t2 = replaceMatchVar(m["t"]);
     return t2.match(i.currentTerm, i.bindings);
   }
   return false;
@@ -229,7 +229,7 @@ Bool gelly::rewrite::prim::import(Term t, Strategy i) {
   var m = new Map<String, Term>();
   if(importPattern.match(t, m)) {
     //try {
-      var filename = m["m_fn"].as<StringTerm>.value;
+      var filename = m["fn"].as<StringTerm>.value;
       var f = new pil::io::ReadFile(filename);
       var content = f.readAll();
       return i.evalString(content);

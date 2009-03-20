@@ -3,9 +3,9 @@ strategy try(s)[] {
 };
 
 strategy where(s)[] {
-  ?[ m_t ]
+  ?[ $t ]
   ; s
-  ; ![ m_t ]
+  ; ![ $t ]
 };
 
 strategy not(s)[] {
