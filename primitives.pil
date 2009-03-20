@@ -6,7 +6,7 @@ import gelly::rewrite
 
 Term gelly::rewrite::buildPattern = replaceMatchVar(new Parser("![ m_t ]").acceptExp(), "m_");
 Term gelly::rewrite::matchPattern = replaceMatchVar(new Parser("?[ m_t ]").acceptExp(), "m_");
-Term gelly::rewrite::importPattern = replaceMatchVar(new Parser(":import m_fn").acceptExp(), "m_");
+Term gelly::rewrite::importPattern = replaceMatchVar(new Parser("import m_fn").acceptExp(), "m_");
 Term gelly::rewrite::seqPattern = replaceMatchVar(new Parser("m_f1; m_f2").acceptExp(), "m_");
 Term gelly::rewrite::leftChoicePattern = replaceMatchVar(new Parser("m_f1 <+ m_f2").acceptExp(), "m_");
 Term gelly::rewrite::strategyDefPattern = replaceMatchVar(new Parser("strategy m_name (m_strparam)[m_valparam] { m_steps }").acceptExp(), "m_");
@@ -57,20 +57,27 @@ Bool gelly::rewrite::prim::strategyDef(Term t, Strategy i) {
       }
     }
     i.strategies[name] = new StrategyDef(strArgName, valArgName, valArgPassByValue, m["m_steps"]);
-    println("Defined " + name + " strategy.");
     return true;
   }
   return false;
 }
 
 Bool gelly::rewrite::prim::seq(Term t, Strategy i) {
-  var m = new Map<String, Term>();
-  if(seqPattern.match(t, m)) {
-    if(i.eval(m["m_f1"])) {
-      return i.eval(m["m_f2"]);
+  var passedOnce = false;
+  while(t instanceof ConsTerm && t.as<ConsTerm>.constructor == ";") {
+    var t2 = t.as<ConsTerm>;
+    if(!i.eval(t2.children[0])) {
+      return false;
+    } else {
+      t = t2.children[1];
     }
+    passedOnce = true;
   }
-  return false;
+  if(passedOnce) {
+    return i.eval(t);
+  } else {
+    return false;
+  }
 }
 
 Bool gelly::rewrite::prim::leftChoice(Term t, Strategy i) {
@@ -125,7 +132,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
   } else if(strategyName == "fail") {
     return false;
   } else if(strategyName == "eval") {
-    var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), new Map<String, Term>());
+    var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), i.bindings.clone());
     newStr.currentTerm = i.currentTerm;
     if(!newStr.eval(m["m_valparam"])) {
       return false;

@@ -13,21 +13,20 @@ void main(Array<String> args) {
   String input = null;
   println("Welcome to gelly, type :q to quit.");
   var s = new Strategy(new Map<String, StrategyDef>(), new Map<String, ClosureStrategyDef>(), new Map<String, Term>());
-  if(s.evalString(":import \"test.g\"")) {
-    println(s.currentTerm.toIndentedString(0));
-  } else {
-    println("Rewriting failed.");
+  if(!s.evalString("import \"sugar.g\"")) {
+    println("Couldn't load sugar.g");
   }
-  /*
   while(input != ":q") {
     print("> ");
     input = readln();
     if(input != ":q") {
-      println(new Parser(input).acceptExp().toIndentedString(0));
-      //interp.eval(input);
+      if(s.evalString(input)) {
+        println(s.currentTerm.toIndentedString(0));
+      } else {
+        println("Rewriting failed.");
+      }
     }
   }
-  */
   /*
   println(new Parser("if: 3 == 0").acceptExp().toIndentedString(0));
   println(new Parser("if 3 + if 8").acceptExp().toIndentedString(0));

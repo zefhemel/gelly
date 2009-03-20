@@ -400,9 +400,13 @@ class gel::Parser {
     while(i < text.length && ((text[i] >= 'a' && text[i] <= 'z') || 
                               (text[i] >= 'A' && text[i] <= 'Z') ||
                               (text[i] >= '0' && text[i] <= '9') ||
-                              (text[i] == '_'))) {
+                              (text[i] == '_') || (text[i] == '-'))) {
       sym.append(text[i]);
       i++;
+    }
+    while(i > 1 && text[i-1] == '-') {
+      i--;
+      sym.remove(sym.length-1);
     }
     return sym.as<String>;
   }

@@ -1,9 +1,11 @@
-:import "simple.g";
-:import "sugar.g";
+import "sugar.g";
+
 main[
-  rule bla : [ 1 ] -> [ 2 ];
+  rule bla-rule : [ 1 ] -> [ 2 ];
+  rule bla2rule : [ 2 ] -> [ 3 ] where { fail };
   strategy whatever_id {
     id; debug
   };
-  <(bla; whatever_id)> [ 1 ]
+  <(bla-rule; whatever_id)> [ 1 ];
+  try(bla2rule);
 ]
