@@ -12,7 +12,7 @@ void main(Array<String> args) {
   //evalInit();
   String input = null;
   println("Welcome to gelly, type :q to quit.");
-  var s = new Strategy(new Map<String, StrategyDef>(), new Map<String, Term>());
+  var s = new Strategy(new Map<String, StrategyDef>(), new Map<String, ClosureStrategyDef>(), new Map<String, Term>());
   if(s.evalString(":import \"test.g\"")) {
     println(s.currentTerm.toIndentedString(0));
   } else {

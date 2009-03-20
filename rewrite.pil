@@ -54,13 +54,26 @@ class gelly::rewrite::StrategyDef {
   }
 }
 
+class gelly::rewrite::ClosureStrategyDef {
+  Term t = null;
+  Strategy parent = null;
+
+  new(Strategy parent, Term t) {
+    this.parent = parent;
+    this.t = t;
+  }
+}
+
 class gelly::rewrite::Strategy {
   Term currentTerm = new EmptyTerm();
   Map<String, Term> bindings = null;
   Map<String, StrategyDef> strategies = null;
+  Map<String, ClosureStrategyDef> closureStrategies = null;
+  Strategy parent = null;
 
-  new(Map<String, StrategyDef> strategies, Map<String, Term> bindings) {
+  new(Map<String, StrategyDef> strategies, Map<String, ClosureStrategyDef> closureStrategies, Map<String, Term> bindings) {
     this.strategies = strategies;
+    this.closureStrategies = closureStrategies;
     this.bindings = bindings;
   }
 
