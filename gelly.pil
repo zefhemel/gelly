@@ -12,22 +12,12 @@ void main(Array<String> args) {
   //evalInit();
   String input = null;
   println("Welcome to gelly, type :q to quit.");
-  println(replaceMatchVar(new Parser("$name").acceptExp()));
-
-  println( gelly::rewrite::buildPattern );
-  println( gelly::rewrite::matchPattern );
-  println( gelly::rewrite::importPattern );
-  println( gelly::rewrite::seqPattern );
-  println( gelly::rewrite::leftChoicePattern );
-  println( gelly::rewrite::strategyDefPattern );
-  println( gelly::rewrite::strategyCallPattern );
-  println( gelly::rewrite::strategyCallNoStrParamPattern );
-  println( gelly::rewrite::strategyCallNoValParamPattern );
-  println( gelly::rewrite::strategyCallNoStrParamNoValParamPattern );
+  //println(new Parser("<$bla> ha").acceptExp().toIndentedString(0));
+  //println(new Parser("<bla> ha").acceptExp().toIndentedString(0));
   var s = new Strategy(new Map<String, StrategyDef>(), new Map<String, ClosureStrategyDef>(), new Map<String, Term>());
-  //if(!s.evalString("import \"sugar.g\"")) {
-    //println("Couldn't load sugar.g");
-  //}
+  if(!s.evalString("import \"sugar.g\"")) {
+    println("Couldn't load sugar.g");
+  }
   while(input != ":q") {
     print("> ");
     input = readln();

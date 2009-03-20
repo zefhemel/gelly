@@ -38,7 +38,7 @@ class gel::Parser {
     );
 
   List<String> noWhitespaceOps = new List<String>(";", ",", ".");
-  List<Char> allOps = new List<Char>('!', '@', '#', '$', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?');
+  List<Char> allOps = new List<Char>('!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?');
   Array<String> prefixOps = new Array<String>("+", "-", "*", "<", ">", "?", "!", ":", "$");
 
 

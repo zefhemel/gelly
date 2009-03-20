@@ -125,7 +125,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
     if(!(m["valparam"] instanceof EmptyTerm)) {
       print(m["valparam"]);
     }
-    println(i.currentTerm);
+    println(i.currentTerm.toIndentedString(0));
     return true;
   } else if(strategyName == "id") {
     return true;
