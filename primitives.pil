@@ -1,0 +1,163 @@
+import "ast.pil"
+import "rewrite.pil"
+
+import gel
+import gelly::rewrite
+import gelly::rewrite
+
+Term gelly::rewrite::buildPattern = replaceMatchVar(new Parser("![ m_t ]").acceptExp(), "m_");
+Term gelly::rewrite::matchPattern = replaceMatchVar(new Parser("?[ m_t ]").acceptExp(), "m_");
+Term gelly::rewrite::importPattern = replaceMatchVar(new Parser(":import m_fn").acceptExp(), "m_");
+Term gelly::rewrite::seqPattern = replaceMatchVar(new Parser("m_f1; m_f2").acceptExp(), "m_");
+Term gelly::rewrite::leftChoicePattern = replaceMatchVar(new Parser("m_f1 <+ m_f2").acceptExp(), "m_");
+Term gelly::rewrite::strategyDefPattern = replaceMatchVar(new Parser("strategy m_name (m_strparam)[m_valparam] { m_steps }").acceptExp(), "m_");
+Term gelly::rewrite::strategyCallPattern = replaceMatchVar(new Parser("m_name(m_strparam)[m_valparam]").acceptExp(), "m_");
+Term gelly::rewrite::strategyCallNoStrParamPattern = replaceMatchVar(new Parser("m_name[m_valparam]").acceptExp(), "m_");
+Term gelly::rewrite::strategyCallNoValParamPattern = replaceMatchVar(new Parser("m_name(m_strparam)").acceptExp(), "m_");
+Term gelly::rewrite::strategyCallNoStrParamNoValParamPattern = replaceMatchVar(new Parser("m_name").acceptExp(), "m_");
+
+Bool gelly::rewrite::prim::build(Term t, Strategy i) {
+  var m = new Map<String, Term>();
+  if(buildPattern.match(t, m)) {
+    i.currentTerm = replaceMatchVar(m["m_t"], "m_").construct(i.bindings);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+Bool gelly::rewrite::prim::strategyDef(Term t, Strategy i) {
+  var m = new Map<String, Term>();
+  if(strategyDefPattern.match(t, m)) {
+    if(!(m["m_name"] instanceof SymbolTerm)) {
+      return false;
+    }
+    String name = m["m_name"].as<SymbolTerm>.symbol;
+    Array<String> strArgs = null;
+    if(m["m_strparam"] instanceof EmptyTerm) {
+      strArgs = new Array<String>();
+    } else {
+      strArgs = new Array<String>(m["m_strparam"].as<SymbolTerm>.symbol);
+    }
+    i.strategies[name] = new StrategyDef(strArgs, m["m_steps"]);
+    println("Defined " + name + " strategy.");
+    return true;
+  }
+  return false;
+}
+
+Bool gelly::rewrite::prim::seq(Term t, Strategy i) {
+  var m = new Map<String, Term>();
+  if(seqPattern.match(t, m)) {
+    if(i.eval(m["m_f1"])) {
+      return i.eval(m["m_f2"]);
+    }
+  }
+  return false;
+}
+
+Bool gelly::rewrite::prim::leftChoice(Term t, Strategy i) {
+  var m = new Map<String, Term>();
+  if(leftChoicePattern.match(t, m)) {
+    if(i.eval(m["m_f1"])) {
+      return true;
+    } else {
+      return i.eval(m["m_f2"]);
+    }
+  }
+  return false;
+}
+
+class gelly::rewrite::StrArgStrategy {
+  Term t = null;
+  Strategy e = null;
+
+  new(Strategy e, Term t) {
+    this.e = e;
+    this.t = t;
+  }
+}
+
+Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
+  var m = new Map<String, Term>();
+  if(strategyCallNoStrParamPattern.match(t, m)) {
+    m["m_strparam"] = new EmptyTerm();
+  } else if(strategyCallNoValParamPattern.match(t, m)) {
+    m["m_valparam"] = new EmptyTerm();
+  } else if(strategyCallNoStrParamNoValParamPattern.match(t, m)) {
+    if(m["m_name"] instanceof SymbolTerm) {
+      m["m_valparam"] = new EmptyTerm();
+      m["m_strparam"] = new EmptyTerm();
+    } else {
+      return false;
+    }
+  } else if(strategyCallPattern.match(t, m)) {
+    // Nuthin'
+  } else {
+    return false;
+  }
+  var ruleName = m["m_name"].as<SymbolTerm>.symbol;
+  if(ruleName == "debug") {
+    if(!(m["m_valparam"] instanceof EmptyTerm)) {
+      print(m["m_valparam"]);
+    }
+    println(i.currentTerm);
+    return true;
+  } else if(ruleName == "id") {
+    return true;
+  } else if(ruleName == "fail") {
+    return false;
+  } else {
+    if(i.strategies.contains(ruleName)) {
+      var str = i.strategies[ruleName];
+      var newStr = new Strategy(i.strategies.clone(), i.closureStrategies.clone(), i.bindings.clone()); //new Map<String, Term>());
+      newStr.currentTerm = i.currentTerm;
+      Array<StrArgStrategy> strArgs = null;
+      if(!(m["m_strparam"] instanceof EmptyTerm)) {
+        newStr.closureStrategies[str.strArgs[0]] = new ClosureStrategyDef(i, m["m_strparam"]);
+      }
+      if(newStr.eval(str.t)) {
+        i.currentTerm = newStr.currentTerm;
+        return true;
+      } else {
+        return false;
+      }
+    } else if(i.closureStrategies.contains(ruleName)) {
+      ClosureStrategyDef str = i.closureStrategies[ruleName];
+      var newStr = new Strategy(str.parent.strategies, str.parent.closureStrategies, str.parent.bindings);
+      newStr.currentTerm = i.currentTerm;
+      Array<StrArgStrategy> strArgs = null;
+      if(newStr.eval(str.t)) {
+        i.currentTerm = newStr.currentTerm;
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+  return false;
+}
+
+Bool gelly::rewrite::prim::match(Term t, Strategy i) {
+  var m = new Map<String, Term>();
+  if(matchPattern.match(t, m)) {
+    var t2 = replaceMatchVar(m["m_t"], "m_");
+    return t2.match(i.currentTerm, i.bindings);
+  }
+  return false;
+}
+
+Bool gelly::rewrite::prim::import(Term t, Strategy i) {
+  var m = new Map<String, Term>();
+  if(importPattern.match(t, m)) {
+    //try {
+      var filename = m["m_fn"].as<StringTerm>.value;
+      var f = new pil::io::ReadFile(filename);
+      var content = f.readAll();
+      return i.evalString(content);
+    //} catch(Exception e) {
+      //println("Could not read file.");
+    //}
+  }
+  return false;
+}
