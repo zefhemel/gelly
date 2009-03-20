@@ -3,7 +3,6 @@ import "rewrite.pil"
 
 import gel
 import gelly::rewrite
-import gelly::rewrite
 
 Term gelly::rewrite::buildPattern = replaceMatchVar(new Parser("![ m_t ]").acceptExp(), "m_");
 Term gelly::rewrite::matchPattern = replaceMatchVar(new Parser("?[ m_t ]").acceptExp(), "m_");
@@ -15,6 +14,16 @@ Term gelly::rewrite::strategyCallPattern = replaceMatchVar(new Parser("m_name(m_
 Term gelly::rewrite::strategyCallNoStrParamPattern = replaceMatchVar(new Parser("m_name[m_valparam]").acceptExp(), "m_");
 Term gelly::rewrite::strategyCallNoValParamPattern = replaceMatchVar(new Parser("m_name(m_strparam)").acceptExp(), "m_");
 Term gelly::rewrite::strategyCallNoStrParamNoValParamPattern = replaceMatchVar(new Parser("m_name").acceptExp(), "m_");
+
+Array<Function2<Bool, Term, Strategy>> gelly::rewrite::primitiveConstructs = new Array<Function2<Bool, Term, Strategy>>(
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyCall(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::import(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyDef(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::seq(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::leftChoice(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::build(t, i) },
+  Bool(Term t, Strategy i) { gelly::rewrite::prim::match(t, i) }
+);
 
 Bool gelly::rewrite::prim::build(Term t, Strategy i) {
   var m = new Map<String, Term>();
@@ -107,6 +116,41 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy i) {
     return true;
   } else if(ruleName == "fail") {
     return false;
+  } else if(ruleName == "all" || ruleName == "one") {
+    if(i.currentTerm instanceof ConsTerm) {
+      var stratT = m["m_strparam"];
+      var successful = true;
+      var newT = i.currentTerm.as<ConsTerm>.clone();
+      var oldCurrentTerm = i.currentTerm;
+      for(Int j = 0; j < newT.children.length; j++) {
+        i.currentTerm = newT.children[j];
+        if(ruleName == "all") {
+          successful = successful && gelly::rewrite::prim::strategyCall(stratT, i);
+        } else if(ruleName == "one") {
+          if(gelly::rewrite::prim::strategyCall(stratT, i)) {
+            newT.children[j] = i.currentTerm;
+            i.currentTerm = newT;
+            return true;
+          } else {
+            successful = false;
+          }
+        }
+        if(successful) {
+          newT.children[j] = i.currentTerm;
+        }
+      }
+      if(successful) {
+        i.currentTerm = newT;
+        return true;
+      } else {
+        i.currentTerm = oldCurrentTerm;
+        return false;
+      }
+    } else if(ruleName == "one") { // One fails on non-cons terms
+      return false;
+    } else {
+      return true;
+    }
   } else {
     if(i.strategies.contains(ruleName)) {
       var str = i.strategies[ruleName];

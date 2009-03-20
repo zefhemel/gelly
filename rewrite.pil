@@ -2,22 +2,11 @@ import "ast.pil"
 import "parser.pil"
 import "utils.pil"
 import "/Users/zef/svn/pil/src/lib/io.pil"
+import "primitives.pil"
 
 import gel
 import gelly::utils
 import gelly::rewrite
-
-Array<Function2<Bool, Term, Strategy>> gelly::rewrite::primitives = new Array<Function2<Bool, Term, Strategy>>(
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyCall(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::import(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyDef(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::seq(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::leftChoice(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::build(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::match(t, i) }
-);
-
-
 
 Term gelly::rewrite::replaceMatchVar(Term t, String idnPrefix) {
   if(t instanceof SymbolTerm && stringStartsWith(t.as<SymbolTerm>.symbol, idnPrefix)) {
@@ -81,7 +70,7 @@ class gelly::rewrite::Strategy {
     if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "()") {
       t = t.as<ConsTerm>.children[0];
     }
-    for(Function2<Bool, Term, Strategy> f : primitives) {
+    for(Function2<Bool, Term, Strategy> f : primitiveConstructs) {
       if(f(t, this)) {
         return true;
       }
