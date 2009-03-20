@@ -28,7 +28,7 @@ class gel::Parser {
     new Array<String>("*", "/", "%"),
     new Array<String>("+", "-"),
     new Array<String>("<", "<=", ">", ">="),
-    new Array<String>("!",  "=", "+=", "-=", "*="),
+    new Array<String>("!",  "=", "+=", "-=", "*=", ":="),
     new Array<String>("&"),
     new Array<String>("|"),
     new Array<String>("?", ":", "$"),

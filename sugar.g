@@ -26,12 +26,17 @@ strategy gelly-sugar-strategy-simple()[] {
 
 strategy gelly-sugar-strategy-application()[] {
   ?[ <m_str> m_t ]
-  ; ![ !m_t; m_str ]
+  ; ![ m_t; m_str ]
 };
 
 strategy gelly-sugar-strategy-application2()[] {
   ?[ <(m_str)> m_t ]
-  ; ![ !m_t; m_str ]
+  ; ![ m_t; m_str ]
+};
+
+strategy gelly-sugar-binding()[] {
+  ?[ m_lhs := m_rhs ]
+  ; ![ m_rhs; ?[ m_lhs ] ]
 };
 
 strategy main()[:m_p] {
@@ -41,6 +46,7 @@ strategy main()[:m_p] {
          gelly-sugar-rule-where-def
       <+ gelly-sugar-rule-def
       <+ gelly-sugar-strategy-simple
+      <+ gelly-sugar-binding
       <+ gelly-sugar-strategy-application
       <+ gelly-sugar-strategy-application2
     )

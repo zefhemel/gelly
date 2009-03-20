@@ -6,6 +6,6 @@ main[
   strategy whatever_id {
     id; debug
   };
-  <(bla-rule; whatever_id)> [ 1 ];
+  <(bla-rule; whatever_id)> ![ 1 ];
   try(bla2rule);
 ]
