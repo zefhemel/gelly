@@ -1,9 +1,17 @@
+strategy hd()[] {
+  ?[ [ m_x, m_rest ] ];
+  ![ m_x ]
+};
+strategy tl()[] {
+  ?[ [ m_x, m_rest ] ];
+  ![ [ m_rest ] ]
+};
 strategy simplify()[] {
-  ?[ m_x * 1 ];
+  ?[ 1 * m_x ];
   ![ m_x ]
 };
 strategy simplify2()[] {
-  ?[ m_x + 0 ];
+  ?[ 0 + m_x ];
   ![ m_x ]
 };
 strategy try(s)[] {
@@ -12,5 +20,11 @@ strategy try(s)[] {
 strategy repeat(s)[] {
   try(s; repeat(s))
 };
-![ 8 * 3 * 1 * 1 * 1 * 1 + 0];
-repeat(simplify <+ simplify2)
+![ 1 * 1 * 7 * 8 ];
+repeat(simplify <+ simplify2);
+debug["Simplification: "];
+![ [1, 2, 3, 4, 5] ];
+debug;
+tl;
+tl;
+hd

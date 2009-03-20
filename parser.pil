@@ -204,11 +204,14 @@ class gel::Parser {
         return t;
       }
       Term t2 = null;
+      /*
       if(level == 0) {
         t2 = acceptFactor();
       } else {
         t2 = acceptGeneric(level-1);
       }
+      */
+      t2 = acceptGeneric(level);
       t = new ConsTerm(0, op, new Array<Term>(t, valueOrEmpty(t2)));
       oldI = i;
       if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
