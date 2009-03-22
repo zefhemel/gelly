@@ -9,9 +9,7 @@ import gelly::utils
 import gelly::rewrite
 
 Term gelly::rewrite::replaceMatchVar(Term t) {
-  //if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "$" && t.as<ConsTerm>.type == 2 && t.as<ConsTerm>.children[0] instanceof ConsTerm && t.as<ConsTerm>.children[0].as<ConsTerm>.constructor == "$") {
-  if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "$" && t.as<ConsTerm>.type == 1) {
-    //return new MatchVarTerm(t.as<ConsTerm>.children[0].as<ConsTerm>.children[0].as<SymbolTerm>.symbol);
+  if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "`" && t.as<ConsTerm>.type == 1) {
     return new MatchVarTerm(t.as<ConsTerm>.children[0].as<SymbolTerm>.symbol);
   } else if(t instanceof ConsTerm) {
     var t2 = t.as<ConsTerm>;

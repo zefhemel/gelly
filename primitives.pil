@@ -4,16 +4,16 @@ import "rewrite.pil"
 import gel
 import gelly::rewrite
 
-Term gelly::rewrite::buildPattern = replaceMatchVar(new Parser("![ $t ]").acceptExp());
-Term gelly::rewrite::matchPattern = replaceMatchVar(new Parser("?[ $t ]").acceptExp());
-Term gelly::rewrite::importPattern = replaceMatchVar(new Parser("import $fn").acceptExp());
-Term gelly::rewrite::seqPattern = replaceMatchVar(new Parser("$f1; $f2").acceptExp());
-Term gelly::rewrite::leftChoicePattern = replaceMatchVar(new Parser("$f1 <+ $f2").acceptExp());
-Term gelly::rewrite::strategyDefPattern = replaceMatchVar(new Parser("strategy $name ($strparam)[$valparam] { $steps }").acceptExp());
-Term gelly::rewrite::strategyCallPattern = replaceMatchVar(new Parser("$name$($strparam)[$valparam]").acceptExp());
-Term gelly::rewrite::strategyCallNoStrParamPattern = replaceMatchVar(new Parser("$name[$valparam]").acceptExp());
-Term gelly::rewrite::strategyCallNoValParamPattern = replaceMatchVar(new Parser("$name($strparam)").acceptExp());
-Term gelly::rewrite::strategyCallNoStrParamNoValParamPattern = replaceMatchVar(new Parser("$name").acceptExp());
+Term gelly::rewrite::buildPattern = replaceMatchVar(new Parser("![ `t ]").acceptExp());
+Term gelly::rewrite::matchPattern = replaceMatchVar(new Parser("?[ `t ]").acceptExp());
+Term gelly::rewrite::importPattern = replaceMatchVar(new Parser("import `fn").acceptExp());
+Term gelly::rewrite::seqPattern = replaceMatchVar(new Parser("`f1; `f2").acceptExp());
+Term gelly::rewrite::leftChoicePattern = replaceMatchVar(new Parser("`f1 <+ `f2").acceptExp());
+Term gelly::rewrite::strategyDefPattern = replaceMatchVar(new Parser("strategy `name (`strparam)[`valparam] { `steps }").acceptExp());
+Term gelly::rewrite::strategyCallPattern = replaceMatchVar(new Parser("`name(`strparam)[`valparam]").acceptExp());
+Term gelly::rewrite::strategyCallNoStrParamPattern = replaceMatchVar(new Parser("`name[`valparam]").acceptExp());
+Term gelly::rewrite::strategyCallNoValParamPattern = replaceMatchVar(new Parser("`name(`strparam)").acceptExp());
+Term gelly::rewrite::strategyCallNoStrParamNoValParamPattern = replaceMatchVar(new Parser("`name").acceptExp());
 
 Array<Function2<Bool, Term, Strategy>> gelly::rewrite::primitiveConstructs = new Array<Function2<Bool, Term, Strategy>>(
   Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyCall(t, i) },
