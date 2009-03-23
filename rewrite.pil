@@ -9,14 +9,22 @@ import gelly::utils
 import gelly::rewrite
 
 Term gelly::rewrite::replaceMatchVar(Term t) {
-  if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "`" && t.as<ConsTerm>.type == 1) {
-    return new MatchVarTerm(t.as<ConsTerm>.children[0].as<SymbolTerm>.symbol);
-  } else if(t instanceof ConsTerm) {
-    var t2 = t.as<ConsTerm>;
+  if(t instanceof OpTerm && t.as<OpTerm>.op == "`" && t.as<OpTerm>.isPrefix()) {
+    return new MatchVarTerm(t.as<OpTerm>.right.as<SymbolTerm>.symbol);
+  } else if(t instanceof OpTerm) {
+    var t2 = t.as<OpTerm>;
     var ct = t2.clone();
-    for(Int i = 0; i < ct.children.length; i++) {
-      ct.children[i] = replaceMatchVar(ct.children[i]);
+    if(!ct.isPrefix()) {
+      ct.left = replaceMatchVar(ct.left);
+    } 
+    if(!ct.isPostfix()) {
+      ct.right = replaceMatchVar(ct.right);
     }
+    return ct;
+  } else if(t instanceof GroupTerm) {
+    var t2 = t.as<GroupTerm>;
+    var ct = t2.clone();
+    ct.group = replaceMatchVar(ct.group);
     return ct;
   }
   return t;
@@ -62,7 +70,6 @@ class gelly::rewrite::Strategy {
   Map<String, Term> bindings = null;
   Map<String, StrategyDef> strategies = null;
   Map<String, ClosureStrategyDef> closureStrategies = null;
-  Strategy parent = null;
 
   new(Map<String, StrategyDef> strategies, Map<String, ClosureStrategyDef> closureStrategies, Map<String, Term> bindings) {
     this.strategies = strategies;
@@ -71,8 +78,8 @@ class gelly::rewrite::Strategy {
   }
 
   Bool eval(Term t) {
-    if(t instanceof ConsTerm && t.as<ConsTerm>.constructor == "()") {
-      t = t.as<ConsTerm>.children[0];
+    if(t instanceof GroupTerm && t.as<GroupTerm>.type == '(') {
+      t = t.as<GroupTerm>.group;
     } else if(t instanceof EmptyTerm) {
       return true;
     }
