@@ -1,5 +1,6 @@
 import "ast.pil"
 import "rewrite.pil"
+import "primitives.pil"
 
 import gel
 import gelly::rewrite
@@ -24,6 +25,17 @@ Array<Function2<Bool, Term, Env>> gelly::rewrite::primitiveConstructs = new Arra
   Bool(Term t, Env env) { gelly::rewrite::prim::build(t, env) },
   Bool(Term t, Env env) { gelly::rewrite::prim::match(t, env) }
 );
+
+Map<String, Function2<Bool, Map<String,Term>, Env>> gelly::rewrite::primitives = new Map<String, Function2<Bool, Map<String,Term>, Env>>();
+
+void gelly::rewrite::initPrimitives() {
+  primitives["id"] = Bool(Map<String,Term> bindings, Env env) { gelly::rewrite::primitives::id(bindings, env) };
+  primitives["fail"] = Bool(Map<String,Term> bindings, Env env) { gelly::rewrite::primitives::fail(bindings, env) };
+  primitives["one"] = Bool(Map<String,Term> bindings, Env env) { gelly::rewrite::primitives::one(bindings, env) };
+  primitives["all"] = Bool(Map<String,Term> bindings, Env env) { gelly::rewrite::primitives::all(bindings, env) };
+  primitives["debug"] = Bool(Map<String,Term> bindings, Env env) { gelly::rewrite::primitives::debug(bindings, env) };
+  primitives["eval"] = Bool(Map<String,Term> bindings, Env env) { gelly::rewrite::primitives::eval(bindings, env) };
+}
 
 Bool gelly::rewrite::prim::build(Term t, Env env) {
   var m = new Map<String, Term>();
@@ -121,100 +133,8 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Env env) {
     return false;
   }
   var strategyName = m["name"].as<SymbolTerm>.symbol;
-  if(strategyName == "debug") {
-    if(!(m["valparam"] instanceof EmptyTerm)) {
-      print(m["valparam"]);
-    }
-    println(env.currentTerm.toIndentedString(0));
-    return true;
-  } else if(strategyName == "id") {
-    return true;
-  } else if(strategyName == "fail") {
-    return false;
-  } else if(strategyName == "eval") {
-    var newStr = new Env(env.strategies.clone(), env.closureStrategies.clone(), env.bindings.clone());
-    newStr.currentTerm = env.currentTerm;
-    if(!newStr.eval(m["valparam"])) {
-      return false;
-    }
-    return env.eval(newStr.currentTerm);
-  } else if(strategyName == "all" || strategyName == "one") {
-    if(env.currentTerm instanceof OpTerm) {
-      var stratT = m["strparam"];
-      var successful = true;
-      var newT = env.currentTerm.as<OpTerm>.clone();
-      var oldCurrentTerm = env.currentTerm;
-      if(newT.left != null) {
-        env.currentTerm = newT.left;
-        if(strategyName == "all") {
-          successful = successful && gelly::rewrite::prim::strategyCall(stratT, env);
-        } else if(strategyName == "one") {
-          if(gelly::rewrite::prim::strategyCall(stratT, env)) {
-            newT.left = env.currentTerm;
-            env.currentTerm = newT;
-            return true;
-          } else {
-            successful = false;
-          }
-        }
-        if(successful) {
-          newT.left = env.currentTerm;
-        }
-      }
-      if(newT.right != null) {
-        env.currentTerm = newT.right;
-        if(strategyName == "all") {
-          successful = successful && gelly::rewrite::prim::strategyCall(stratT, env);
-        } else if(strategyName == "one") {
-          if(gelly::rewrite::prim::strategyCall(stratT, env)) {
-            newT.right = env.currentTerm;
-            env.currentTerm = newT;
-            return true;
-          } else {
-            successful = false;
-          }
-        }
-        if(successful) {
-          newT.right = env.currentTerm;
-        }
-      }
-      if(successful) {
-        env.currentTerm = newT;
-        return true;
-      } else {
-        env.currentTerm = oldCurrentTerm;
-        return false;
-      }
-    } else if(env.currentTerm instanceof GroupTerm) {
-      var stratT = m["strparam"];
-      var successful = true;
-      var newT = env.currentTerm.as<GroupTerm>.clone();
-      var oldCurrentTerm = env.currentTerm;
-      env.currentTerm = newT.group;
-      if(strategyName == "all") {
-        successful = successful && gelly::rewrite::prim::strategyCall(stratT, env);
-      } else if(strategyName == "one") {
-        if(gelly::rewrite::prim::strategyCall(stratT, env)) {
-          newT.group = env.currentTerm;
-          env.currentTerm = newT;
-          return true;
-        } else {
-          successful = false;
-        }
-      }
-      if(successful) {
-        newT.group = env.currentTerm;
-        env.currentTerm = newT;
-        return true;
-      } else {
-        env.currentTerm = oldCurrentTerm;
-        return false;
-      }
-    } else if(strategyName == "one") { // One fails on non-cons terms
-      return false;
-    } else {
-      return true;
-    }
+  if(primitives.contains(strategyName)) {
+    return primitives[strategyName].call(m, env);
   } else {
     if(env.strategies.contains(strategyName)) {
       var str = env.strategies[strategyName];

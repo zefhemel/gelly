@@ -1,0 +1,87 @@
+import "rewrite.pil"
+import "pretty.pil"
+
+import gelly
+import gelly::rewrite
+
+Bool gelly::rewrite::primitives::id(Map<String, Term> bindings, Env env) {
+  return true;
+}
+
+Bool gelly::rewrite::primitives::fail(Map<String, Term> bindings, Env env) {
+  return false;
+}
+
+Bool gelly::rewrite::primitives::debug(Map<String, Term> bindings, Env env) {
+  if(!(bindings["valparam"] instanceof EmptyTerm)) {
+    print(pretty(bindings["valparam"], 0));
+  }
+  println(pretty(env.currentTerm, 0));
+  return true;
+}
+
+Bool gelly::rewrite::primitives::one(Map<String, Term> bindings, Env env) {
+  if(env.currentTerm instanceof OpTerm) {
+    var stratT = bindings["strparam"];
+    var newT = env.currentTerm.as<OpTerm>.clone();
+    var oldCurrentTerm = env.currentTerm;
+    if(newT.left != null) {
+      env.currentTerm = newT.left;
+      if(gelly::rewrite::prim::strategyCall(stratT, env)) {
+        newT.left = env.currentTerm;
+        env.currentTerm = newT;
+        return true;
+      }
+    }
+    if(newT.right != null) {
+      env.currentTerm = newT.right;
+      if(gelly::rewrite::prim::strategyCall(stratT, env)) {
+        newT.right = env.currentTerm;
+        env.currentTerm = newT;
+        return true;
+      }
+    }
+    env.currentTerm = oldCurrentTerm;
+  }
+  return false;
+}
+
+Bool gelly::rewrite::primitives::all(Map<String, Term> bindings, Env env) {
+  if(env.currentTerm instanceof OpTerm) {
+    var stratT = bindings["strparam"];
+    var successful = true;
+    var newT = env.currentTerm.as<OpTerm>.clone();
+    var oldCurrentTerm = env.currentTerm;
+    if(newT.left != null) {
+      env.currentTerm = newT.left;
+      successful = successful && gelly::rewrite::prim::strategyCall(stratT, env);
+      if(successful) {
+        newT.left = env.currentTerm;
+      }
+    }
+    if(newT.right != null) {
+      env.currentTerm = newT.right;
+      successful = successful && gelly::rewrite::prim::strategyCall(stratT, env);
+      if(successful) {
+        newT.right = env.currentTerm;
+      }
+    }
+    if(successful) {
+      env.currentTerm = newT;
+      return true;
+    } else {
+      env.currentTerm = oldCurrentTerm;
+      return false;
+    }
+  }
+  return true;
+}
+
+Bool gelly::rewrite::primitives::eval(Map<String, Term> bindings, Env env) {
+  var newStr = new Env(env.strategies.clone(), env.closureStrategies.clone(), env.bindings.clone());
+  newStr.currentTerm = env.currentTerm;
+  if(!newStr.eval(bindings["valparam"])) {
+    return false;
+  }
+  return env.eval(newStr.currentTerm);
+}

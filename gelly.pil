@@ -3,13 +3,14 @@ import "parser.pil"
 //import "evaluator.pil"
 import "rewrite.pil"
 import "core.pil"
+import "primitives.pil"
 
 import gel
 import gelly::rewrite
 
 
 void main(Array<String> args) {
-  //evalInit();
+  initPrimitives();
   String input = null;
   //println(replaceMatchVar(new Parser("![ `exp ]").acceptExp()).toIndentedString(0));
   //println(new Parser("<bla> ha").acceptExp().toIndentedString(0));
