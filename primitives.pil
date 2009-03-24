@@ -73,6 +73,16 @@ Bool gelly::rewrite::primitives::all(Map<String, Term> bindings, Env env) {
       env.currentTerm = oldCurrentTerm;
       return false;
     }
+  } else if(env.currentTerm instanceof GroupTerm) {
+    var oldT = env.currentTerm;
+    env.currentTerm = env.currentTerm.as<GroupTerm>.group;
+    if(gelly::rewrite::primitives::all(bindings, env)) {
+      env.currentTerm = new GroupTerm(oldT.as<GroupTerm>.type, env.currentTerm);
+      return true;
+    } else {
+      env.currentTerm = oldT;
+      return false;
+    }
   }
   return true;
 }

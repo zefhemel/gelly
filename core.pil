@@ -135,45 +135,45 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Env env) {
   var strategyName = m["name"].as<SymbolTerm>.symbol;
   if(primitives.contains(strategyName)) {
     return primitives[strategyName].call(m, env);
-  } else {
-    if(env.strategies.contains(strategyName)) {
-      var str = env.strategies[strategyName];
-      var newStr = new Env(env.strategies.clone(), env.closureStrategies.clone(), new Map<String, Term>()); //env.bindings.clone()); //new Map<String, Term>());
-      newStr.currentTerm = env.currentTerm;
-      if(!(m["strparam"] instanceof EmptyTerm)) {
-        newStr.closureStrategies[str.strArgName] = new ClosureStrategyDef(env, m["strparam"]);
-      }
-      if(!(m["valparam"] instanceof EmptyTerm)) {
-        if(str.valArgPassByValue) {
-          var oldT = env.currentTerm;
-          if(!env.eval(m["valparam"])) {
-            return false;
-          }
-          newStr.bindings[str.valArgName] = env.currentTerm;
-          env.currentTerm = oldT;
-        } else {
-          newStr.bindings[str.valArgName] = m["valparam"];
-        }
-      }
-      if(newStr.eval(str.t)) {
-        env.currentTerm = newStr.currentTerm;
-        return true;
-      } else {
-        return false;
-      }
-    } else if(env.closureStrategies.contains(strategyName)) {
-      ClosureStrategyDef str = env.closureStrategies[strategyName];
-      var newStr = new Env(str.parent.strategies, str.parent.closureStrategies, str.parent.bindings);
-      newStr.currentTerm = env.currentTerm;
-      if(newStr.eval(str.t)) {
-        env.currentTerm = newStr.currentTerm;
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      println("No such strategy: " + strategyName);
+  }
+
+  if(env.strategies.contains(strategyName)) {
+    var str = env.strategies[strategyName];
+    var newEnv = new Env(env.strategies.clone(), env.closureStrategies.clone(), new Map<String, Term>()); //env.bindings.clone()); //new Map<String, Term>());
+    newEnv.currentTerm = env.currentTerm;
+    if(!(m["strparam"] instanceof EmptyTerm)) {
+      newEnv.closureStrategies[str.strArgName] = new ClosureStrategyDef(env, m["strparam"]);
     }
+    if(!(m["valparam"] instanceof EmptyTerm)) {
+      if(str.valArgPassByValue) {
+        var oldT = env.currentTerm;
+        if(!env.eval(m["valparam"])) {
+          return false;
+        }
+        newEnv.bindings[str.valArgName] = env.currentTerm;
+        env.currentTerm = oldT;
+      } else {
+        newEnv.bindings[str.valArgName] = m["valparam"];
+      }
+    }
+    if(newEnv.eval(str.t)) {
+      env.currentTerm = newEnv.currentTerm;
+      return true;
+    } else {
+      return false;
+    }
+  } else if(env.closureStrategies.contains(strategyName)) {
+    ClosureStrategyDef str = env.closureStrategies[strategyName];
+    var newStr = new Env(str.parent.strategies, str.parent.closureStrategies, str.parent.bindings);
+    newStr.currentTerm = env.currentTerm;
+    if(newStr.eval(str.t)) {
+      env.currentTerm = newStr.currentTerm;
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    println("No such strategy: " + strategyName);
   }
   return false;
 }
