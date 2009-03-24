@@ -1,43 +1,34 @@
 strategy try(s)[] {
-  s <+ id
+  s <+ id;
 };
 
 strategy where(s)[] {
-  ?[ $t ]
-  ; s
-  ; ![ $t ]
+  ?[ $t ];
+  s;
+  ![ $t ];
 };
 
 strategy not(s)[] {
-  try(s; fail)
+  try(s; fail);
 };
  
 strategy alltd(s)[] {
-  s <+ all(alltd(s))
+  s <+ all(alltd(s));
 };
  
 strategy topdown(s)[] {
-  s; all(topdown(s))
+  s; all(topdown(s));
 };
  
 strategy bottomup(s)[] {
-  all(bottomup(s)); s
+  all(bottomup(s)); s;
 };
  
 strategy oncebu(s)[] {
-  one(oncebu(s)) <+ s
+  one(oncebu(s)) <+ s;
 };
  
 strategy innermost(s)[] {
-  bottomup(try(s; innermost(s)))
+  bottomup(try(s; innermost(s)));
 };
 
-strategy replace2()[] {
-  ?[ 2 ]
-  ; ![ 1 ]
-};
- 
-strategy replace3()[] {
-  ?[ 3 ]
-  ; ![ 2 ]
-};

@@ -2,7 +2,7 @@ import "ast.pil"
 import "parser.pil"
 //import "evaluator.pil"
 import "rewrite.pil"
-import "primitives.pil"
+import "core.pil"
 
 import gel
 import gelly::rewrite
@@ -13,13 +13,13 @@ void main(Array<String> args) {
   String input = null;
   //println(replaceMatchVar(new Parser("![ `exp ]").acceptExp()).toIndentedString(0));
   //println(new Parser("<bla> ha").acceptExp().toIndentedString(0));
-  var s = new Strategy(new Map<String, StrategyDef>(), new Map<String, ClosureStrategyDef>(), new Map<String, Term>());
-  if(!s.evalString("import \"sugar.g\"")) {
+  var env = new Env(new Map<String, StrategyDef>(), new Map<String, ClosureStrategyDef>(), new Map<String, Term>());
+  if(!env.evalString("import \"sugar.g\"")) {
     println("Couldn't load sugar.g");
   }
   if(args.length > 0) {
-    if(s.evalString("import \"" + args[0] + "\"")) {
-      println(s.currentTerm.toIndentedString(0));
+    if(env.evalString("import \"" + args[0] + "\"")) {
+      println(env.currentTerm.toIndentedString(0));
     } else {
       println("Rewriting failed.");
     }
@@ -29,8 +29,8 @@ void main(Array<String> args) {
       print("> ");
       input = readln();
       if(input != ":q") {
-        if(s.evalString(input)) {
-          println(s.currentTerm.toIndentedString(0));
+        if(env.evalString(input)) {
+          println(env.currentTerm.toIndentedString(0));
         } else {
           println("Rewriting failed.");
         }

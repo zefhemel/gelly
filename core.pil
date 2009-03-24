@@ -15,17 +15,17 @@ Term gelly::rewrite::strategyCallNoStrParamPattern = replaceMatchVar(new Parser(
 Term gelly::rewrite::strategyCallNoValParamPattern = replaceMatchVar(new Parser("`name(`strparam)").acceptExp());
 Term gelly::rewrite::strategyCallNoStrParamNoValParamPattern = replaceMatchVar(new Parser("`name").acceptExp());
 
-Array<Function2<Bool, Term, Strategy>> gelly::rewrite::primitiveConstructs = new Array<Function2<Bool, Term, Strategy>>(
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyCall(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::import(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::strategyDef(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::seq(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::leftChoice(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::build(t, i) },
-  Bool(Term t, Strategy i) { gelly::rewrite::prim::match(t, i) }
+Array<Function2<Bool, Term, Env>> gelly::rewrite::primitiveConstructs = new Array<Function2<Bool, Term, Env>>(
+  Bool(Term t, Env env) { gelly::rewrite::prim::strategyCall(t, env) },
+  Bool(Term t, Env env) { gelly::rewrite::prim::import(t, env) },
+  Bool(Term t, Env env) { gelly::rewrite::prim::strategyDef(t, env) },
+  Bool(Term t, Env env) { gelly::rewrite::prim::seq(t, env) },
+  Bool(Term t, Env env) { gelly::rewrite::prim::leftChoice(t, env) },
+  Bool(Term t, Env env) { gelly::rewrite::prim::build(t, env) },
+  Bool(Term t, Env env) { gelly::rewrite::prim::match(t, env) }
 );
 
-Bool gelly::rewrite::prim::build(Term t, Strategy env) {
+Bool gelly::rewrite::prim::build(Term t, Env env) {
   var m = new Map<String, Term>();
   if(buildPattern.match(t, m)) {
     env.currentTerm = replaceMatchVar(m["t"]).construct(env.bindings);
@@ -35,7 +35,7 @@ Bool gelly::rewrite::prim::build(Term t, Strategy env) {
   }
 }
 
-Bool gelly::rewrite::prim::strategyDef(Term t, Strategy env) {
+Bool gelly::rewrite::prim::strategyDef(Term t, Env env) {
   var m = new Map<String, Term>();
   if(strategyDefPattern.match(t, m)) {
     if(!(m["name"] instanceof SymbolTerm)) {
@@ -62,7 +62,7 @@ Bool gelly::rewrite::prim::strategyDef(Term t, Strategy env) {
   return false;
 }
 
-Bool gelly::rewrite::prim::seq(Term t, Strategy env) {
+Bool gelly::rewrite::prim::seq(Term t, Env env) {
   var passedOnce = false;
   while(t instanceof OpTerm && t.as<OpTerm>.op == ";") {
     var t2 = t.as<OpTerm>;
@@ -80,7 +80,7 @@ Bool gelly::rewrite::prim::seq(Term t, Strategy env) {
   }
 }
 
-Bool gelly::rewrite::prim::leftChoice(Term t, Strategy env) {
+Bool gelly::rewrite::prim::leftChoice(Term t, Env env) {
   var m = new Map<String, Term>();
   if(leftChoicePattern.match(t, m)) {
     if(env.eval(m["f1"])) {
@@ -94,15 +94,15 @@ Bool gelly::rewrite::prim::leftChoice(Term t, Strategy env) {
 
 class gelly::rewrite::StrArgStrategy {
   Term t = null;
-  Strategy e = null;
+  Env e = null;
 
-  new(Strategy e, Term t) {
+  new(Env e, Term t) {
     this.e = e;
     this.t = t;
   }
 }
 
-Bool gelly::rewrite::prim::strategyCall(Term t, Strategy env) {
+Bool gelly::rewrite::prim::strategyCall(Term t, Env env) {
   var m = new Map<String, Term>();
   if(strategyCallNoStrParamPattern.match(t, m)) {
     m["strparam"] = new EmptyTerm();
@@ -132,7 +132,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy env) {
   } else if(strategyName == "fail") {
     return false;
   } else if(strategyName == "eval") {
-    var newStr = new Strategy(env.strategies.clone(), env.closureStrategies.clone(), env.bindings.clone());
+    var newStr = new Env(env.strategies.clone(), env.closureStrategies.clone(), env.bindings.clone());
     newStr.currentTerm = env.currentTerm;
     if(!newStr.eval(m["valparam"])) {
       return false;
@@ -218,7 +218,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy env) {
   } else {
     if(env.strategies.contains(strategyName)) {
       var str = env.strategies[strategyName];
-      var newStr = new Strategy(env.strategies.clone(), env.closureStrategies.clone(), new Map<String, Term>()); //env.bindings.clone()); //new Map<String, Term>());
+      var newStr = new Env(env.strategies.clone(), env.closureStrategies.clone(), new Map<String, Term>()); //env.bindings.clone()); //new Map<String, Term>());
       newStr.currentTerm = env.currentTerm;
       if(!(m["strparam"] instanceof EmptyTerm)) {
         newStr.closureStrategies[str.strArgName] = new ClosureStrategyDef(env, m["strparam"]);
@@ -243,7 +243,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy env) {
       }
     } else if(env.closureStrategies.contains(strategyName)) {
       ClosureStrategyDef str = env.closureStrategies[strategyName];
-      var newStr = new Strategy(str.parent.strategies, str.parent.closureStrategies, str.parent.bindings);
+      var newStr = new Env(str.parent.strategies, str.parent.closureStrategies, str.parent.bindings);
       newStr.currentTerm = env.currentTerm;
       if(newStr.eval(str.t)) {
         env.currentTerm = newStr.currentTerm;
@@ -258,7 +258,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Strategy env) {
   return false;
 }
 
-Bool gelly::rewrite::prim::match(Term t, Strategy env) {
+Bool gelly::rewrite::prim::match(Term t, Env env) {
   var m = new Map<String, Term>();
   if(matchPattern.match(t, m)) {
     var t2 = replaceMatchVar(m["t"]);
@@ -267,7 +267,7 @@ Bool gelly::rewrite::prim::match(Term t, Strategy env) {
   return false;
 }
 
-Bool gelly::rewrite::prim::import(Term t, Strategy env) {
+Bool gelly::rewrite::prim::import(Term t, Env env) {
   var m = new Map<String, Term>();
   if(importPattern.match(t, m)) {
     //try {

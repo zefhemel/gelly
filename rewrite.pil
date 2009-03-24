@@ -1,10 +1,12 @@
 import "ast.pil"
 import "parser.pil"
 import "utils.pil"
-import "/Users/zef/svn/pil/src/lib/io.pil"
-import "primitives.pil"
+import "/Domain/tudelft.net/Users/zhemel/svn/pil/src/lib/io.pil"
+import "core.pil"
+import "pretty.pil"
 
 import gel
+import gelly
 import gelly::utils
 import gelly::rewrite
 
@@ -57,15 +59,15 @@ class gelly::rewrite::StrategyDef {
 
 class gelly::rewrite::ClosureStrategyDef {
   Term t = null;
-  Strategy parent = null;
+  Env parent = null;
 
-  new(Strategy parent, Term t) {
+  new(Env parent, Term t) {
     this.parent = parent;
     this.t = t;
   }
 }
 
-class gelly::rewrite::Strategy {
+class gelly::rewrite::Env {
   Term currentTerm = new EmptyTerm();
   Map<String, Term> bindings = null;
   Map<String, StrategyDef> strategies = null;
@@ -83,7 +85,7 @@ class gelly::rewrite::Strategy {
     } else if(t instanceof EmptyTerm) {
       return true;
     }
-    for(Function2<Bool, Term, Strategy> f : primitiveConstructs) {
+    for(Function2<Bool, Term, Env> f : primitiveConstructs) {
       if(f(t, this)) {
         return true;
       }
@@ -95,6 +97,7 @@ class gelly::rewrite::Strategy {
   Bool evalString(String input) {
     var p = new Parser(input);
     var t = p.acceptExp();
+    //println(pretty(t, 0));
     if(t != null) {
       return eval(t);
     }

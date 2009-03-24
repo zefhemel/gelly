@@ -1,18 +1,18 @@
 strategy hd()[] {
-  ?[ [ m_x, m_rest ] ];
-  ![ m_x ]
+  ?[ [ `x, `rest ] ];
+  ![ `x ]
 };
 strategy tl()[] {
-  ?[ [ m_x, m_rest ] ];
-  ![ [ m_rest ] ]
+  ?[ [ `x, `rest ] ];
+  ![ [ `rest ] ]
 };
 strategy simplify()[] {
-  ?[ 1 * m_x ];
-  ![ m_x ]
+  ?[ 1 * `x ];
+  ![ `x ]
 };
 strategy simplify2()[] {
-  ?[ 0 + m_x ];
-  ![ m_x ]
+  ?[ 0 + `x ];
+  ![ `x ]
 };
 strategy try(s)[] {
   s <+ id
