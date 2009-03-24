@@ -68,7 +68,7 @@ Bool gelly::rewrite::prim::strategyDef(Term t, Env env) {
         valArgPassByValue = false;
       }
     }
-    env.strategies[name] = new StrategyDef(strArgName, valArgName, valArgPassByValue, m["steps"]);
+    env.strategies[name] = new StrategyDef(env, strArgName, valArgName, valArgPassByValue, m["steps"]);
     return true;
   }
   return false;
@@ -139,7 +139,7 @@ Bool gelly::rewrite::prim::strategyCall(Term t, Env env) {
 
   if(env.strategies.contains(strategyName)) {
     var str = env.strategies[strategyName];
-    var newEnv = new Env(env.strategies.clone(), env.closureStrategies.clone(), new Map<String, Term>()); //env.bindings.clone()); //new Map<String, Term>());
+    var newEnv = new Env(str.env.strategies.clone(), str.env.closureStrategies.clone(), str.env.bindings.clone()); //);new Map<String, Term>()); //env.bindings.clone()); //new Map<String, Term>());
     newEnv.currentTerm = env.currentTerm;
     if(!(m["strparam"] instanceof EmptyTerm)) {
       newEnv.closureStrategies[str.strArgName] = new ClosureStrategyDef(env, m["strparam"]);

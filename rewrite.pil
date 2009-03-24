@@ -44,12 +44,14 @@ class gelly::rewrite::CouldNotInterpretException extends Exception {
 }
 
 class gelly::rewrite::StrategyDef {
+  Env env = null;
   Term t = null;
   String strArgName = null;
   String valArgName = null;
   Bool valArgPassByValue = true;
 
-  new(String strArgName, String valArgName, Bool valArgPassByValue, Term t) {
+  new(Env env, String strArgName, String valArgName, Bool valArgPassByValue, Term t) {
+    this.env = env;
     this.strArgName = strArgName;
     this.valArgName = valArgName;
     this.valArgPassByValue = valArgPassByValue;
