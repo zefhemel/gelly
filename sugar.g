@@ -26,8 +26,8 @@ strategy gelly-sugar-strategy-simple()[] {
 };
 
 strategy gelly-sugar-strategy-application()[] {
-  ?[ <`str> `t ];
-  ![ `t; `str ];
+  ?[ <`str> `t2 ];
+  ![ `t2; `str ];
 };
 
 strategy gelly-sugar-strategy-application2()[] {
@@ -40,9 +40,9 @@ strategy gelly-sugar-binding()[] {
   ![ `rhs; ?[ `lhs ] ];
 };
 
-strategy main()[:p] {
-  ?[ `t ];
-  ![ `p ];
+unscoped strategy main()[:main-p] {
+  ?[ `main-t ];
+  ![ `main-p ];
   innermost(
        gelly-sugar-rule-where-def
     <+ gelly-sugar-rule-def
@@ -51,7 +51,7 @@ strategy main()[:p] {
     <+ gelly-sugar-strategy-application
     <+ gelly-sugar-strategy-application2
   );
-  ?[ `p2 ];
-  ![ `t ];
-  eval[ ![ `p2 ] ];
+  ?[ `main-p2 ];
+  ![ `main-t ];
+  eval[ ![ `main-p2 ] ];
 };

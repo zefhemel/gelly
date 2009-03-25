@@ -4,6 +4,7 @@ import "parser.pil"
 import "rewrite.pil"
 import "core.pil"
 import "primitives.pil"
+import "pretty.pil"
 
 import gel
 import gelly::rewrite
@@ -20,7 +21,7 @@ void main(Array<String> args) {
   }
   if(args.length > 0) {
     if(env.evalString("import \"" + args[0] + "\"")) {
-      println(env.currentTerm.toIndentedString(0));
+      println(pretty(env.currentTerm, 0));
     } else {
       println("Rewriting failed.");
     }

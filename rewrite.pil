@@ -39,19 +39,21 @@ class gelly::rewrite::CouldNotInterpretException extends Exception {
   }
 
   as<String> {
-    return "Could not interpret: " + t.as<String>;
+    return "Could not interpret: " + pretty(t, 0);
   }
 }
 
 class gelly::rewrite::StrategyDef {
   Env env = null;
+  Bool scoped = true;
   Term t = null;
   String strArgName = null;
   String valArgName = null;
   Bool valArgPassByValue = true;
 
-  new(Env env, String strArgName, String valArgName, Bool valArgPassByValue, Term t) {
+  new(Env env, Bool scoped, String strArgName, String valArgName, Bool valArgPassByValue, Term t) {
     this.env = env;
+    this.scoped = scoped;
     this.strArgName = strArgName;
     this.valArgName = valArgName;
     this.valArgPassByValue = valArgPassByValue;
@@ -74,6 +76,7 @@ class gelly::rewrite::Env {
   Map<String, Term> bindings = null;
   Map<String, StrategyDef> strategies = null;
   Map<String, ClosureStrategyDef> closureStrategies = null;
+  Int constructCounter = 0;
 
   new(Map<String, StrategyDef> strategies, Map<String, ClosureStrategyDef> closureStrategies, Map<String, Term> bindings) {
     this.strategies = strategies;
@@ -87,12 +90,15 @@ class gelly::rewrite::Env {
     } else if(t instanceof EmptyTerm) {
       return true;
     }
+    constructCounter = 0;
     for(Function2<Bool, Term, Env> f : primitiveConstructs) {
       if(f(t, this)) {
         return true;
       }
     }
-    //throw new CouldNotInterpretException(t);
+    if(constructCounter == primitiveConstructs.length) {
+      throw new CouldNotInterpretException(t);
+    }
     return false;
   }
 

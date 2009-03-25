@@ -85,8 +85,9 @@ Bool gelly::rewrite::primitives::all(Map<String, Term> bindings, Env env) {
     }
   } else if(env.currentTerm instanceof GroupTerm) {
     var oldT = env.currentTerm;
+    var stratT = bindings["strparam"];
     env.currentTerm = env.currentTerm.as<GroupTerm>.group;
-    if(gelly::rewrite::primitives::all(bindings, env)) {
+    if(gelly::rewrite::prim::strategyCall(stratT, env)) {
       env.currentTerm = new GroupTerm(oldT.as<GroupTerm>.type, env.currentTerm);
       return true;
     } else {
