@@ -58,7 +58,7 @@ class gel::OpTerm extends gel::Term {
     s.append(op);
     var sawCons = false;
     if(!isPrefix()) {
-      if(left instanceof OpTerm) {
+      if(left instanceof OpTerm || left instanceof GroupTerm) {
         s.append("\n");
         sawCons = true;
       } else {
@@ -67,7 +67,7 @@ class gel::OpTerm extends gel::Term {
       s.append(left.toIndentedString(depth+1));
     }
     if(!isPostfix()) {
-      if(right instanceof OpTerm) {
+      if(right instanceof OpTerm || right instanceof GroupTerm) {
         s.append("\n");
       } else if(sawCons) {
         s.append("\n");
@@ -196,6 +196,20 @@ class gel::GroupTerm extends gel::Term {
     return new GroupTerm(type, group);
   }
 
+  String toIndentedString(Int depth) {
+    var s = new MutableString();
+    s.append(spaces(depth));
+    s.append("(");
+    s.append(type);
+    if(group instanceof OpTerm || group instanceof GroupTerm) {
+      s.append("\n");
+    } else {
+      s.append(' ');
+    }
+    s.append(group.toIndentedString(depth+1));
+    s.append(')');
+    return s.as<String>;
+  }
   as<String> {
     var ms = new MutableString();
     ms.append('(');

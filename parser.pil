@@ -24,11 +24,11 @@ class gel::Parser {
   Int followLevel = 0;
 
   Array<Array<String>> operators = new Array<Array<String>>(
-    new Array<String>("."),
+    new Array<String>(".", "_"),
     new Array<String>("*", "/", "%"),
     new Array<String>("+", "-"),
     new Array<String>("<", "<=", ">", ">="),
-    new Array<String>("!",  "=", "+=", "-=", "*=", ":="),
+    new Array<String>("!",  "=", "+=", "-=", "*=", ":=", "!="),
     new Array<String>("&"),
     new Array<String>("|"),
     new Array<String>("?", ":", "$"),
@@ -37,7 +37,7 @@ class gel::Parser {
     new Array<String>(";")
     );
 
-  List<String> noWhitespaceOps = new List<String>(";", ",", ".");
+  List<String> noWhitespaceOps = new List<String>(";", ",", ".", "_");
   List<Char> allOps = new List<Char>('!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?');
   Array<String> prefixOps = new Array<String>("+", "-", "*", "<", ">", "?", "!", ":", "`", "$");
 
@@ -191,27 +191,41 @@ class gel::Parser {
     var didAcceptWhitespace = acceptWhiteSpace();
     var op = acceptOps(operators[level]);
     if(!didAcceptWhitespace && op != null && !noWhitespaceOps.contains(op)) {
-      i = oldI;
-      if(level == followLevel) {
-        return followFactor(t);
-      } else {
-        return t;
-      }
+      //if(level == 0) { // Postfix
+        t = new OpTerm(op, t, null);
+        acceptWhiteSpace();
+        oldI = i;
+        op = acceptOps(operators[level]);
+      //} else {
+        //i = oldI;
+        //return t;
+      //}
+      //if(level == followLevel) {
+        //return followFactor(t);
+      //} else {
+      //}
     }
     while(op != null) {
       if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
+        /*
+        i = oldI;
+        return t;
+        */
+        t = new OpTerm(op, t, null);
+        acceptWhiteSpace();
+        op = acceptOps(operators[level]);
+      }
+      Term t2 = null;
+      if(level == 0) {
+        t2 = acceptFactor(); // One level lower to ennforce left-recursive parsing
+      } else {
+        t2 = acceptGeneric(level);
+      }
+      if(t2 == null && op == "_") {
         i = oldI;
         return t;
       }
-      Term t2 = null;
-      /*
-      if(level == 0) {
-        t2 = acceptFactor();
-      } else {
-        t2 = acceptGeneric(level-1);
-      }
-      */
-      t2 = acceptGeneric(level);
+      //t2 = acceptGeneric(level);
       t = new OpTerm(op, t, valueOrEmpty(t2));
       oldI = i;
       if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
@@ -221,11 +235,11 @@ class gel::Parser {
       op = acceptOps(operators[level]);
     }
     i = oldI;
-    if(level == followLevel) {
-      return followFactor(t);
-    } else {
+    //if(level == followLevel) {
+      //return followFactor(t);
+    //} else {
       return t;
-    }
+    //}
   }
 
   Term acceptExp() {
@@ -278,8 +292,11 @@ class gel::Parser {
   }
 
   String acceptOps(Array<String> ops) {
+    var canBeWhiteSpace = false;
     for(String op : ops) {
-      if(lookAhead(op)) {
+      if(op == "_") {
+        canBeWhiteSpace = true;
+      } else if(lookAhead(op)) {
         var opstr = new MutableString(op);
         var oldI = i;
         i = i + op.length;
@@ -294,7 +311,11 @@ class gel::Parser {
         }
       }
     }
-    return null;
+    if(canBeWhiteSpace) {
+      return "_";
+    } else {
+      return null;
+    }
   }
 
   String acceptKeyword() {

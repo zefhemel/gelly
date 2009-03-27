@@ -14,22 +14,27 @@ void main(Array<String> args) {
   initPrimitives();
   String input = null;
   //println(replaceMatchVar(new Parser("![ `exp ]").acceptExp()).toIndentedString(0));
-  //println(new Parser("<bla> ha").acceptExp().toIndentedString(0));
-  var env = new Env(new Map<String, StrategyDef>(), new Map<String, ClosureStrategyDef>(), new Map<String, Term>());
-  if(!env.evalString("import \"sugar.g\"")) {
-    println("Couldn't load sugar.g");
-  }
-  if(args.length > 0) {
+  println(new Parser("a++ + 7--").acceptExp().toIndentedString(0));
+  println(new Parser("a.b.c()").acceptExp().toIndentedString(0));
+  println(new Parser("a().b").acceptExp().toIndentedString(0));
+  println(new Parser("a().b()").acceptExp().toIndentedString(0));
+  //if(true) {
+    //return;
+  //}
+  /*if(args.length > 0) {
     if(env.evalString("import \"" + args[0] + "\"")) {
       println(pretty(env.currentTerm, 0));
     } else {
       println("Rewriting failed.");
     }
   } else {
+    */
     println("Welcome to gelly, type :q to quit.");
     while(input != ":q") {
       print("> ");
       input = readln();
+      println(new Parser(input).acceptExp().toIndentedString(0));
+      /*
       if(input != ":q") {
         if(env.evalString(input)) {
           println(env.currentTerm.toIndentedString(0));
@@ -37,8 +42,9 @@ void main(Array<String> args) {
           println("Rewriting failed.");
         }
       }
+      */
     }
-  }
+  //}
   /*
   println(new Parser("if: 3 == 0").acceptExp().toIndentedString(0));
   println(new Parser("if 3 + if 8").acceptExp().toIndentedString(0));

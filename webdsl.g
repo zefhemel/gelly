@@ -9,7 +9,7 @@ main[
 
     strategy single-to-code {
       ?[ `s(`a) ];
-      ![ `s(`a) ingore ];
+      ![ `s(`a) ignore ];
       elem-to-code;
     };
 
