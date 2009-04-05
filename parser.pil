@@ -279,7 +279,7 @@ class gelly::Parser {
   }
 
   String acceptSymbol() {
-    if(!accept(':')) {
+    if(!accept('#')) {
       return null;
     }
     var idn = acceptIdn();

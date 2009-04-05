@@ -61,8 +61,7 @@ class gelly::BlockTerm extends gelly::Term {
 
   String toIndentedString(Int depth) {
     var s = new MutableString();
-    s.append(spaces(depth));
-    s.append("[");
+    s.append("[\n");
     for(Term t : statements) {
       s.append(t.toIndentedString(depth+1));
       s.append('\n');
@@ -156,7 +155,7 @@ class gelly::SymbolTerm extends gelly::Term {
   }
 
   as<String> {
-    return symbol;
+    return "#" + symbol;
   }
 }
 
