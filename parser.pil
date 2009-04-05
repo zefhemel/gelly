@@ -1,27 +1,16 @@
 import "ast.pil"
 
-import gel
-import gel::util
+import gelly
+import gelly::util
 
-class gel::ParseException extends Exception {
+class gelly::ParseException extends Exception {
   new(String message) extends super(message) {
   }
 }
 
-Term gel::util::valueOrEmpty(Term t) {
-  if(t == null) {
-    return new EmptyTerm();
-  } else {
-    return t;
-  }
-}
-
-class gel::Parser {
+class gelly::Parser {
   String text = "";
   Int i = 0;
-
-  Int keywordLevel = 9;
-  Int followLevel = 0;
 
   Array<Array<String>> operators = new Array<Array<String>>(
     new Array<String>("."),
@@ -37,149 +26,53 @@ class gel::Parser {
     new Array<String>(";")
     );
 
-  List<String> noWhitespaceOps = new List<String>(";", ",", ".");
   List<Char> allOps = new List<Char>('!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?');
-  Array<String> prefixOps = new Array<String>("+", "-", "*", "<", ">", "?", "!", ":", "`", "$");
-
 
   new(String text) {
     this.text = text;
   }
 
-  Term followFactor(Term t) {
-    var oldI = i;
-    if(!acceptWhiteSpace()) { // Postfix
-      var op = acceptOps(prefixOps);
-      if(op != null) {
-        t = new OpTerm(op, t, null);
-      }
-      acceptWhiteSpace();
-      oldI = i;
-    }
-    //var exp = acceptExp();
-    var exp = acceptGeneric(followLevel);
-    if(exp == null) {
-      i = oldI;
-      return t;
-    }
-    while(exp != null) {
-      oldI = i;
-      acceptWhiteSpace();
-      t = new OpTerm("_", t, exp);
-      //exp = acceptExp();
-      exp = acceptGeneric(followLevel);
-      if(exp == null) {
-        i = oldI;
-        return t;
-      }
-    }
-    return t;
-  }
-
-  /*
   Term acceptFactor() {
-    var t = acceptFactorNoFollow();
-    if(t == null) {
-      return null;
-    } else {
-      return followFactor(t);
-    }
-  }
-  */
-
-  Term acceptFactor() { //NoFollow() {
     var in = acceptInt();
     if(in != -1) {
       return new IntTerm(in);
     }
-    var idn = acceptIdn();
-    if(idn != null && !lookAhead(":")) {
-      return new SymbolTerm(idn);
-    } else if(idn != null && lookAhead(":")) {
-      i = i - idn.length;
+    var sym = acceptSymbol();
+    if(sym != null) {
+      return new SymbolTerm(sym);
+    }
+    var v = acceptIdn();
+    if(v != null) {
+      return new IdnTerm(v);
     }
     var s = acceptString();
     if(s != null) {
       return new StringTerm(s);
-    }
-    /*
-    var mv = acceptMatchVar();
-    if(mv != null) {
-      return new MatchVarTerm(mv);
-    }
-    */
-    var pe = acceptPrefixExp();
-    if(pe != null) {
-      return pe;
     }
     if(accept('(')) {
       acceptWhiteSpace();
       var exp = acceptExp();
       acceptWhiteSpace();
       expect(')');
-      return new GroupTerm('(', valueOrEmpty(exp));
+      return exp;
     }
     if(accept('[')) {
       acceptWhiteSpace();
-      var exp = acceptExp();
-      acceptWhiteSpace();
-      expect(']');
-      return new GroupTerm('[', valueOrEmpty(exp));
-    }
-    if(accept('{')) {
-      acceptWhiteSpace();
-      var exp = acceptExp();
-      acceptWhiteSpace();
-      expect('}');
-      return new GroupTerm('{', valueOrEmpty(exp));
+      var stats = new List<Term>();
+      while(!accept(']')) {
+        var exp = acceptExp();
+        acceptWhiteSpace();
+        stats.add(exp);
+      }
+      return new BlockTerm(stats.as<Array<Term>>);
     }
     return null;
-  }
-
-  Term acceptPrefixExp() {
-    var op = acceptOps(prefixOps);
-    if(op == null) {
-      return null;
-    }
-    var t = acceptFactor(); //acceptGeneric(0);
-    if(t != null) {
-      return new OpTerm(op, null, t);
-    } else {
-      return null;
-    }
-  }
-
-  Term acceptGenericKeyword() {
-    var oldI = i;
-    acceptWhiteSpace();
-    var kw = acceptKeyword();
-    if(kw == null) {
-      i = oldI;
-      return acceptGeneric(keywordLevel - 1);
-    } 
-    acceptWhiteSpace();
-    var t = acceptGeneric(keywordLevel - 1);
-    if(t != null) {
-      //return followFactor(new ConsTerm(1, kw, new Array<Term>(t)));
-      return new OpTerm(kw, null, t);
-    } else {
-      i = oldI;
-      return null;
-    }
   }
 
   Term acceptGeneric(Int level) {
     Term f = null;
     if(level == 0) {
       f = acceptFactor();
-    } else if(level == keywordLevel) {
-      f = acceptGenericKeyword();
-      //return acceptGenericKeyword();
-      /*
-      if(f == null) {
-        f = acceptGeneric(level-1);
-      }
-      */
     } else {
       f = acceptGeneric(level-1);
     }
@@ -188,41 +81,50 @@ class gel::Parser {
     }
     var t = f;
     var oldI = i;
-    var didAcceptWhitespace = acceptWhiteSpace();
+    acceptWhiteSpace();
     var op = acceptOps(operators[level]);
-    if(!didAcceptWhitespace && op != null && !noWhitespaceOps.contains(op)) {
-      i = oldI;
-      if(level == followLevel) {
-        return followFactor(t);
-      } else {
-        return t;
-      }
-    }
+    acceptWhiteSpace();
     while(op != null) {
-      if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
-        i = oldI;
-        return t;
-      }
       Term t2 = null;
-      /*
-      if(level == 0) {
-        t2 = acceptFactor();
-      } else {
-        t2 = acceptGeneric(level-1);
-      }
-      */
       t2 = acceptGeneric(level);
-      t = new OpTerm(op, t, valueOrEmpty(t2));
+      t = new MessageSendTerm(t, op, new Array<Term>(t2));
       oldI = i;
-      if(!acceptWhiteSpace() && !noWhitespaceOps.contains(op)) {
-        i = oldI;
-        return t;
-      }
       op = acceptOps(operators[level]);
+      acceptWhiteSpace();
     }
     i = oldI;
-    if(level == followLevel) {
-      return followFactor(t);
+    return t;
+  }
+
+  Term acceptPostfix() {
+    var t = acceptGeneric(operators.length-1);
+    var oldI = i;
+    acceptWhiteSpace();
+    var idn = acceptIdn();
+    if(idn != null && !accept(':')) {
+      return new MessageSendTerm(t, idn, new Array<Term>());
+    } else {
+      i = oldI;
+      return t;
+    }
+  }
+
+  Term acceptMS() {
+    var t = acceptPostfix();
+    var selector = new MutableString();
+    var args = new List<Term>();
+    acceptWhiteSpace();
+    var kw = acceptKeyword();
+    while(kw != null) {
+      selector.append(kw);
+      acceptWhiteSpace();
+      var arg = acceptPostfix();
+      args.add(arg);
+      acceptWhiteSpace();
+      kw = acceptKeyword();
+    }
+    if(args.length > 0) {
+      return new MessageSendTerm(t, selector.as<String>, args.as<Array<Term>>);
     } else {
       return t;
     }
@@ -230,7 +132,8 @@ class gel::Parser {
 
   Term acceptExp() {
     acceptWhiteSpace();
-    return acceptGeneric(operators.length-1);
+    var t = acceptMS();
+    return t;
   }
 
   Bool acceptWhiteSpace() {
@@ -375,23 +278,11 @@ class gel::Parser {
     }
   }
 
-  String acceptMatchVar() {
-    if(i == text.length) {
-      return null;
-    }
-    var oldI = i;
-    if(!accept('@')) {
+  String acceptSymbol() {
+    if(!accept(':')) {
       return null;
     }
     var idn = acceptIdn();
-    if(idn == null) {
-      i = oldI;
-      return null;
-    }
-    if(!accept('@')) {
-      i = oldI;
-      return null;
-    }
     return idn;
   }
 

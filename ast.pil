@@ -1,25 +1,13 @@
-import gel
-import gel::util
+import gelly
+import gelly::util
 
-class gel::Term {
+class gelly::Term {
   String toIndentedString(Int depth) {
     return this.as<String>;
   }
-
-  Bool match(Term t, Map<String, Term> bindings) {
-    if(t instanceof MatchVarTerm) {
-      return t.match(this, bindings);
-    } else {
-      return t == this;
-    }
-  }
-
-  Term construct(Map<String, Term> bindings) {
-    return this;
-  }
 }
 
-String gel::util::spaces(Int n) {
+String gelly::util::spaces(Int n) {
   var m = new MutableString();
   for(Int i = 0; i < n; i++) {
     m.append("  ");
@@ -27,119 +15,36 @@ String gel::util::spaces(Int n) {
   return m.as<String>;
 }
 
-class gel::OpTerm extends gel::Term {
-  String op = null;
-  Term left = null;
-  Term right = null;
+class gelly::MessageSendTerm extends gelly::Term {
+  Term object = null;
+  String message = null;
+  Array<Term> arguments = null;
 
-  new(String op, Term left, Term right) {
-    this.op = op;
-    this.left = left;
-    this.right = right;
-  }
-
-  Bool isPrefix() {
-    return left == null && right != null;
-  }
-
-  Bool isPostfix() {
-    return right == null && left != null;
+  new(Term object, String message, Array<Term> arguments) {
+    this.object = object;
+    this.message = message;
+    this.arguments = arguments;
   }
 
   String toIndentedString(Int depth) {
     var s = new MutableString();
     s.append(spaces(depth));
     s.append("(");
-    if(isPrefix()) {
-      s.append("prefix:");
-    } else if(isPostfix()) {
-      s.append("postfix:");
-    }
-    s.append(op);
+    s.append(object.as<String>);
+    s.append(" ");
+    s.append(message);
     var sawCons = false;
-    if(!isPrefix()) {
-      if(left instanceof OpTerm) {
+    for(Term t: arguments) {
+      if(t instanceof MessageSendTerm) {
         s.append("\n");
         sawCons = true;
       } else {
         s.append(' ');
       }
-      s.append(left.toIndentedString(depth+1));
-    }
-    if(!isPostfix()) {
-      if(right instanceof OpTerm) {
-        s.append("\n");
-      } else if(sawCons) {
-        s.append("\n");
-        s.append(spaces(depth+1));
-      } else {
-        s.append(' ');
-      }
-      s.append(right.toIndentedString(depth+1));
+      s.append(t.toIndentedString(depth+1));
     }
     s.append(')');
     return s.as<String>;
-  }
-
-  Bool ==(Object o) {
-    if(o == null) {
-      return false;
-    }
-    if(o instanceof OpTerm) {
-      var t = o.as<OpTerm>;
-      return t.op == op && t.left == left && t.right == right;
-    } else {
-      return false;
-    }
-  }
-
-  Bool match(Term t, Map<String, Term> bindings) {
-    if(t instanceof OpTerm) {
-      var t2 = t.as<OpTerm>;
-      if(op != t2.op) {
-        return false;
-      }
-      if(left != null) {
-        if(left instanceof MatchVarTerm) {
-          if(!left.match(t2.left, bindings)) {
-            return false;
-          }
-        } else {
-          if(!left.match(t2.left, bindings)) {
-            return false;
-          }
-        }
-      }
-      if(right != null) {
-        if(right instanceof MatchVarTerm) {
-          if(!right.match(t2.right, bindings)) {
-            return false;
-          }
-        } else {
-          if(!right.match(t2.right, bindings)) {
-            return false;
-          }
-        }
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  Term construct(Map<String, Term> bindings) {
-    var c = clone();
-    if(left != null) {
-      c.left = left.construct(bindings);
-    }
-    if(right != null) {
-      c.right = right.construct(bindings);
-    }
-    return c;
-  }
-
-  OpTerm clone() {
-    return new OpTerm(op, left, right);
   }
 
   as<String> {
@@ -147,66 +52,32 @@ class gel::OpTerm extends gel::Term {
   }
 }
 
-class gel::GroupTerm extends gel::Term {
-  Char type = '(';
-  Term group = null;
+class gelly::BlockTerm extends gelly::Term {
+  Array<Term> statements = null;
 
-  new(Char type, Term group) {
-    this.type = type;
-    this.group = group;
+  new(Array<Term> statements) {
+    this.statements = statements;
   }
 
-  Bool ==(Object o) {
-    if(o == null) {
-      return false;
+  String toIndentedString(Int depth) {
+    var s = new MutableString();
+    s.append(spaces(depth));
+    s.append("[");
+    for(Term t : statements) {
+      s.append(t.toIndentedString(depth+1));
+      s.append('\n');
     }
-    if(o instanceof GroupTerm) {
-      return o.as<GroupTerm>.type == type && o.as<GroupTerm>.group == group;
-    } else {
-      return false;
-    }
-  }
-
-  Bool match(Term t, Map<String, Term> bindings) {
-    if(t instanceof GroupTerm) {
-      var t2 = t.as<GroupTerm>;
-      if(type != t2.type) {
-        return false;
-      }
-      if(group instanceof MatchVarTerm) {
-        if(!group.match(t2.group, bindings)) {
-          return false;
-        }
-      } else {
-        if(!group.match(t2.group, bindings)) {
-          return false;
-        }
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  Term construct(Map<String, Term> bindings) {
-    return new GroupTerm(type, group.construct(bindings));
-  }
-
-  GroupTerm clone() {
-    return new GroupTerm(type, group);
+    s.append(spaces(depth));
+    s.append("]");
+    return s.as<String>;
   }
 
   as<String> {
-    var ms = new MutableString();
-    ms.append('(');
-    ms.append(type);
-    ms.append(' ');
-    ms.append(group.as<String>);
-    return ms.as<String>;
+    return toIndentedString(0);
   }
 }
 
-class gel::IntTerm extends gel::Term {
+class gelly::IntTerm extends gelly::Term {
   Int value = 0;
 
   new(Int value) {
@@ -231,23 +102,7 @@ class gel::IntTerm extends gel::Term {
   }
 }
 
-class gel::EmptyTerm extends gel::Term {
-  new() { 
-  }
-
-  Bool ==(Object o) {
-    if(o == null) {
-      return false;
-    }
-    return o instanceof EmptyTerm;
-  }
-
-  as<String> {
-    return "[empty]";
-  }
-}
-
-class gel::StringTerm extends gel::Term {
+class gelly::StringTerm extends gelly::Term {
   String value = null;
 
   new(String value) {
@@ -270,7 +125,19 @@ class gel::StringTerm extends gel::Term {
   }
 }
 
-class gel::SymbolTerm extends gel::Term {
+class gelly::IdnTerm extends gelly::Term {
+  String idn = null;
+
+  new(String idn) {
+    this.idn = idn;
+  }
+
+  as<String> {
+    return idn;
+  }
+}
+
+class gelly::SymbolTerm extends gelly::Term {
   String symbol = null;
 
   new(String symbol) {
@@ -293,38 +160,3 @@ class gel::SymbolTerm extends gel::Term {
   }
 }
 
-class gel::MatchVarTerm extends gel::Term {
-  String symbol = null;
-
-  new(String symbol) {
-    this.symbol = symbol;
-  }
-
-  as<String> {
-    return "<?" + symbol + ">";
-  }
-
-  Bool ==(Object o) {
-    if(o == null) {
-      return false;
-    }
-    if(o instanceof MatchVarTerm) {
-      return o.as<MatchVarTerm>.symbol == symbol;
-    } else {
-      return false;
-    }
-  }
-
-  Bool match(Term t, Map<String, Term> bindings) {
-    if(bindings.contains(symbol)) {
-      return bindings[symbol] == t;
-    } else {
-      bindings[symbol] = t;
-      return true;
-    }
-  }
-
-  Term construct(Map<String, Term> bindings) {
-    return bindings[symbol];
-  }
-}
