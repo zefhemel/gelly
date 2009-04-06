@@ -1,0 +1,20 @@
+import "object.pil"
+
+import gelly
+import gelly::exception
+
+GLClass gelly::builtin::string::init() {
+  var string = new GLClass(rootNamespace["Object"], "String");
+  string.instanceMethods["concat:"] = new gelly::builtin::string::StringConcatMethod();
+  return string;
+}
+
+class gelly::builtin::string::StringConcatMethod extends GLMethod {
+  new() extends super("concat:", new Array<String>("str"), new Array<Term>()) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLString(o.as<GLString>.value + args[0].as<GLString>.value);
+  }
+}
+

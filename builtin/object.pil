@@ -1,0 +1,64 @@
+import "object.pil"
+
+import gelly
+import gelly::exception
+
+GLClass gelly::builtin::object::init() {
+  var object = new GLClass(null, "Object");
+  object.methods["new"] = new gelly::builtin::object::NewInstanceMethod();
+  object.instanceMethods["set:to:"] = new gelly::builtin::object::SetFieldMethod();
+  object.instanceMethods["get:"] = new gelly::builtin::object::GetFieldMethod();
+  object.instanceMethods["describe"] = new gelly::builtin::object::DescribeMethod();
+  object.instanceMethods["print:"] = new gelly::builtin::object::PrintMethod();
+  return object;
+}
+
+class gelly::builtin::object::NewInstanceMethod extends GLMethod {
+  new() extends super("new", new Array<String>(), new Array<Term>()) {
+    this.cls = cls;
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLObject(o.as<GLClass>);
+  }
+}
+
+class gelly::builtin::object::SetFieldMethod extends GLMethod {
+  new() extends super("set:to:", new Array<String>("fieldName", "value"), new Array<Term>()) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    var fieldName = args[0].as<GLString>.value;
+    o.setField(fieldName, args[1]);
+    return o;
+  }
+}
+
+class gelly::builtin::object::GetFieldMethod extends GLMethod {
+  new() extends super("get:", new Array<String>("fieldName"), new Array<Term>()) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    var fieldName = args[0].as<GLString>.value;
+    return o.getField(fieldName);
+  }
+}
+
+class gelly::builtin::object::DescribeMethod extends GLMethod {
+  new() extends super("describe", new Array<String>(), new Array<Term>()) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLString(o.as<String>);
+  }
+}
+
+class gelly::builtin::object::PrintMethod extends GLMethod {
+  new() extends super("print:", new Array<String>("str"), new Array<Term>()) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    println(args[0].as<String>);
+    return o;
+  }
+}

@@ -1,168 +1,20 @@
 import "ast.pil"
+import "object.pil"
+import "builtin/object.pil"
+import "builtin/string.pil"
 
 import gelly
-import gelly::base
 import gelly::exception
 
 Map<String, GLClass> gelly::rootNamespace = new Map<String, GLClass>();
 
-class gelly::exception::NoSuchFieldException extends Exception { 
-  new(String field) extends super(field) {
-  }
-}
-
-class gelly::exception::NoSuchMethodException extends Exception {
-  new(String method) extends super(method) {
-  }
-}
-
-class gelly::GLObject {
-  GLClass cls = null;
-  Map<String, GLMethod> methods = new Map<String, GLMethod>();
-  Map<String, GLObject> fields = new Map<String, GLObject>();
-
-  new(GLClass cls) {
-    this.cls = cls;
-  }
-
-  GLMethod getMethod(String selector) {
-    if(methods.contains(selector)) {
-      return methods[selector];
-    }
-    var curCls = this.cls;
-    while(curCls != null && !curCls.instanceMethods.contains(selector)) {
-      curCls = curCls.superClass;
-    }
-    if(curCls == null) {
-      throw new NoSuchMethodException(selector);
-    } else {
-      return curCls.instanceMethods[selector];
-    }
-  }
-  
-  GLObject getField(String name) {
-    var curO = this;
-    while(curO != null && !curO.fields.contains(name)) {
-      curO = curO.cls;
-    }
-    if(curO == null) {
-      throw new NoSuchFieldException(name);
-    } else {
-      return curO.methods[name];
-    }
-  }
-
-  void setField(String name, GLObject value) {
-    var curO = this;
-    while(curO != null && !curO.fields.contains(name)) {
-      curO = curO.cls;
-    }
-    if(curO == null) { // New field, put in this object
-      fields[name] = value;
-    } else {
-      curO.fields[name] = value;
-    }
-  }
-
-  as<String> {
-    var s = new MutableString();
-    s.append("I'm an object of type " + cls.name + " I contain the following fields: ");
-    for(String field : fields.keys) {
-      s.append(field);
-      s.append(' ');
-    }
-    return s.as<String>;
-  }
-}
-
-class gelly::GLClass extends GLObject {
-  GLClass superClass = null;
-  String name = null;
-  Map<String, GLMethod> instanceMethods = new Map<String, GLMethod>();
-
-  new(GLClass superClass, String name) extends super(rootNamespace["Object"]) {
-    this.superClass = superClass;
-    this.name = name;
-  }
-}
-
-class gelly::GLMethod extends GLObject {
-  Array<String> argumentNames = null;
-  Array<Term> statements = null;
-  String selector = null;
-
-  new(String selector, Array<String> argumentNames, Array<Term> statements) extends super(rootNamespace["Method"]){
-    this.argumentNames = argumentNames;
-    this.statements = statements;
-    this.selector = null;
-  }
-
-  GLObject invoke(GLObject o, Array<GLObject> args) {
-    return null;
-  }
-}
-
-class gelly::GLString extends GLObject {
-  String value = null;
-
-  new(String value) extends super(rootNamespace["String"]) {
-    this.value = value;
-  }
-
-  as<String> {
-    return value;
-  }
-}
-
-class gelly::base::NewInstanceMethod extends GLMethod {
-  new() extends super("new", new Array<String>(), new Array<Term>()) {
-    this.cls = cls;
-  }
-
-  GLObject invoke(GLObject o, Array<GLObject> args) {
-    return new GLObject(o.as<GLClass>);
-  }
-}
-
-class gelly::base::ObjectDescribeMethod extends GLMethod {
-  new() extends super("describe", new Array<String>(), new Array<Term>()) {
-  }
-
-  GLObject invoke(GLObject o, Array<GLObject> args) {
-    return new GLString(o.as<String>);
-  }
-}
-
-class gelly::base::PrintMethod extends GLMethod {
-  new() extends super("print:", new Array<String>("str"), new Array<Term>()) {
-  }
-
-  GLObject invoke(GLObject o, Array<GLObject> args) {
-    println(args[0].as<String>);
-    return o;
-  }
-}
-
-class gelly::base::StringConcatMethod extends GLMethod {
-  new() extends super("concat:", new Array<String>("str"), new Array<Term>()) {
-  }
-
-  GLObject invoke(GLObject o, Array<GLObject> args) {
-    return new GLString(o.as<GLString>.value + args[0].as<GLString>.value);
-  }
-}
 
 void gelly::initInterpreter() {
-  var object = new GLClass(null, "Object");
-  object.methods["new"] = new NewInstanceMethod();
-  object.instanceMethods["describe"] = new ObjectDescribeMethod();
-  object.instanceMethods["print:"] = new PrintMethod();
-  rootNamespace["Object"] = object;
+  rootNamespace["Object"] = gelly::builtin::object::init();
+  var object = rootNamespace["Object"];
   var method = new GLClass(object, "Method");
   rootNamespace["Method"] = object;
-  var string = new GLClass(object, "String");
-  string.instanceMethods["concat:"] = new StringConcatMethod();
-  rootNamespace["String"] = string;
+  rootNamespace["String"] = gelly::builtin::string::init();
 }
 
 
