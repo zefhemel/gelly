@@ -1,19 +1,28 @@
 import "ast.pil"
 import "parser.pil"
-//import "evaluator.pil"
+import "io.pil"
+import "interpreter.pil"
 //import "pretty.pil"
 
 import gelly
 
-
 void main(Array<String> args) {
   String input = null;
-  println("Welcome to gelly, type :q to quit.");
-  while(input != ":q") {
-    print("> ");
-    input = readln();
-    if(input != ":q") {
-      println(new Parser(input).acceptExp().toIndentedString(0));
+  initInterpreter();
+  if(args.length > 0) {
+    var file = new pil::io::ReadFile(args[0]);
+    var content = file.readAll();
+    file.close();
+    var parsed = new Parser(content).acceptStatements();
+    new Env(new GLObject(gelly::rootNamespace["Object"])).evalStatements(parsed);
+  } else {
+    println("Welcome to gelly, type :q to quit.");
+    while(input != ":q") {
+      print("> ");
+      input = readln();
+      if(input != ":q") {
+        println(new Parser(input).acceptStatements().toIndentedString(0));
+      }
     }
   }
 }

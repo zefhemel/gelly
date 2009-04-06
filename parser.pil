@@ -17,13 +17,11 @@ class gelly::Parser {
     new Array<String>("*", "/", "%"),
     new Array<String>("+", "-"),
     new Array<String>("<", "<=", ">", ">="),
-    new Array<String>("!",  "=", "+=", "-=", "*=", ":="),
+    new Array<String>("!"),
     new Array<String>("&"),
     new Array<String>("|"),
-    new Array<String>("?", ":", "$"),
-    new Array<String>(","),
-    new Array<String>("keyword"),
-    new Array<String>(";")
+    new Array<String>("?", "$"),
+    new Array<String>(",")
     );
 
   List<Char> allOps = new List<Char>('!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?');
@@ -33,13 +31,10 @@ class gelly::Parser {
   }
 
   Term acceptFactor() {
+    var oldI = i;
     var in = acceptInt();
     if(in != -1) {
       return new IntTerm(in);
-    }
-    var sym = acceptSymbol();
-    if(sym != null) {
-      return new SymbolTerm(sym);
     }
     var v = acceptIdn();
     if(v != null) {
@@ -51,20 +46,67 @@ class gelly::Parser {
     }
     if(accept('(')) {
       acceptWhiteSpace();
-      var exp = acceptExp();
+      var exp = acceptStatement();
       acceptWhiteSpace();
       expect(')');
       return exp;
     }
+    var gr = acceptBlock();
+    if(gr != null) {
+      return gr;
+    }
+    var dgr = acceptDeclBlock();
+    if(dgr != null) {
+      return dgr;
+    }
+    return null;
+  }
+
+  BlockTerm acceptBlock() {
+    var oldI = i;
     if(accept('[')) {
       acceptWhiteSpace();
       var stats = new List<Term>();
       while(!accept(']')) {
-        var exp = acceptExp();
-        acceptWhiteSpace();
+        var exp = acceptStatement();
         stats.add(exp);
+        acceptWhiteSpace();
+        if(!accept(';')) {
+          i = oldI;
+          return null;
+        } else {
+          acceptWhiteSpace();
+        }
       }
       return new BlockTerm(stats.as<Array<Term>>);
+    }
+    return null;
+  }
+
+  Term acceptDeclBlock() {
+    var oldI = i;
+    if(accept('[')) {
+      acceptWhiteSpace();
+      var decls = new List<Term>();
+      while(!accept(']')) {
+        var sig = acceptPostfixNoObject();
+        if(sig == null) {
+          sig = acceptMSNoObject();
+          if(sig == null) {
+            oldI = i;
+            return null;
+          }
+        } 
+        acceptWhiteSpace();
+        var b = acceptBlock();
+        if(b == null) {
+          i = oldI;
+          return null;
+        }
+        decls.add(new MethodDefTerm(sig.as<MessageSendTerm>, b.statements));
+        acceptWhiteSpace();
+      }
+      return new BlockTerm(decls.as<Array<Term>>);
     }
     return null;
   }
@@ -109,6 +151,17 @@ class gelly::Parser {
     }
   }
 
+  Term acceptPostfixNoObject() {
+    var oldI = i;
+    var idn = acceptIdn();
+    if(idn != null && !accept(':')) {
+      return new MessageSendTerm(null, idn, new Array<Term>());
+    } else {
+      i = oldI;
+      return null;
+    }
+  }
+
   Term acceptMS() {
     var t = acceptPostfix();
     var selector = new MutableString();
@@ -130,11 +183,82 @@ class gelly::Parser {
     }
   }
 
+  Term acceptMSNoObject() {
+    var selector = new MutableString();
+    var args = new List<Term>();
+    acceptWhiteSpace();
+    var kw = acceptKeyword();
+    while(kw != null) {
+      selector.append(kw);
+      acceptWhiteSpace();
+      var arg = acceptPostfix();
+      args.add(arg);
+      acceptWhiteSpace();
+      kw = acceptKeyword();
+    }
+    if(args.length > 0) {
+      return new MessageSendTerm(null, selector.as<String>, args.as<Array<Term>>);
+    } else {
+      return null;
+    }
+  }
+
   Term acceptExp() {
     acceptWhiteSpace();
     var t = acceptMS();
     return t;
   }
+
+  Term acceptAssign() {
+    var oldI = i;
+    var t = acceptFactor();
+    acceptWhiteSpace();
+    if(accept('=')) {
+      acceptWhiteSpace();
+      var e = acceptStatement();
+      if(e == null) {
+        i = oldI;
+        return null;
+      }
+      return new AssignTerm(t, e);
+    } else {
+      i = oldI;
+      return null;
+    }
+  }
+
+  Term acceptStatement() {
+    Term t = acceptMSNoObject();
+    if(t == null) {
+      t = acceptAssign();
+      if(t == null) {
+        t = acceptExp();
+      }
+    } else {
+      t.as<MessageSendTerm>.object = new IdnTerm("self");
+    }
+    return t;
+  }
+
+  BlockTerm acceptStatements() {
+    acceptWhiteSpace();
+    var stats = new List<Term>();
+    while(i < text.length) {
+      var exp = acceptStatement();
+      stats.add(exp);
+      acceptWhiteSpace();
+      if(!accept(';')) {
+        printRest();
+        throw new ParseException("; expected");
+      } else {
+        acceptWhiteSpace();
+      }
+    }
+    return new BlockTerm(stats.as<Array<Term>>);
+  }
+
+
+  // ---------------------
 
   Bool acceptWhiteSpace() {
     var oldI = i;
@@ -276,14 +400,6 @@ class gelly::Parser {
       printRest();
       throw new ParseException("Expected: " + c.as<String>);
     }
-  }
-
-  String acceptSymbol() {
-    if(!accept('#')) {
-      return null;
-    }
-    var idn = acceptIdn();
-    return idn;
   }
 
   String acceptIdn() {

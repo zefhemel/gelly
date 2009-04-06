@@ -30,8 +30,10 @@ class gelly::MessageSendTerm extends gelly::Term {
     var s = new MutableString();
     s.append(spaces(depth));
     s.append("(");
-    s.append(object.as<String>);
-    s.append(" ");
+    if(object != null) {
+      s.append(object.as<String>);
+      s.append(" ");
+    }
     s.append(message);
     var sawCons = false;
     for(Term t: arguments) {
@@ -73,6 +75,52 @@ class gelly::BlockTerm extends gelly::Term {
 
   as<String> {
     return toIndentedString(0);
+  }
+}
+
+class gelly::MethodDefTerm extends gelly::Term {
+  MessageSendTerm signature = null;
+  Array<Term> statements = null;
+
+  new(MessageSendTerm signature, Array<Term> statements) {
+    this.signature = signature;
+    this.statements = statements;
+  }
+
+  String toIndentedString(Int depth) {
+    var s = new MutableString();
+    s.append(signature.as<String>);
+    s.append(" [\n");
+    for(Term t : statements) {
+      s.append(t.toIndentedString(depth+1));
+      s.append('\n');
+    }
+    s.append(spaces(depth));
+    s.append("]");
+    return s.as<String>;
+  }
+
+  as<String> {
+    return toIndentedString(0);
+  }
+}
+
+class gelly::AssignTerm extends gelly::Term {
+  Term lhs = null;
+  Term value = null;
+
+  new(Term lhs, Term value) {
+    this.lhs = lhs;
+    this.value = value;
+  }
+
+  String toIndentedString(Int depth) {
+    var s = new MutableString();
+    s.append("(=\n");
+    s.append(spaces(depth) + lhs.toIndentedString(depth+1) + "\n");
+    s.append(spaces(depth) + value.toIndentedString(depth+1));
+    s.append(")");
+    return s.as<String>;
   }
 }
 
@@ -133,29 +181,6 @@ class gelly::IdnTerm extends gelly::Term {
 
   as<String> {
     return idn;
-  }
-}
-
-class gelly::SymbolTerm extends gelly::Term {
-  String symbol = null;
-
-  new(String symbol) {
-    this.symbol = symbol;
-  }
-
-  Bool ==(Object o) {
-    if(o == null) {
-      return false;
-    }
-    if(o instanceof SymbolTerm) {
-      return o.as<SymbolTerm>.symbol == symbol;
-    } else {
-      return false;
-    }
-  }
-
-  as<String> {
-    return "#" + symbol;
   }
 }
 
