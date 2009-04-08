@@ -5,12 +5,12 @@ import gelly::exception
 
 GLClass gelly::builtin::string::init() {
   var string = new GLClass(rootNamespace["Object"], "String");
-  string.instanceMethods["concat:"] = new gelly::builtin::string::StringConcatMethod();
+  string.instanceMethods["+"] = new gelly::builtin::string::StringConcatMethod();
   return string;
 }
 
 class gelly::builtin::string::StringConcatMethod extends GLMethod {
-  new() extends super("concat:", new Array<String>("str"), new Array<Term>()) {
+  new() extends super("+", new Array<String>("str"), null) {
   }
 
   GLObject invoke(GLObject o, Array<GLObject> args) {

@@ -38,7 +38,7 @@ class gelly::Env {
     }
   }
 
-  void evalStatements(Term stats) {
+  void evalBlock(Term stats) {
     if(stats instanceof BlockTerm) {
       for(Term t : stats.as<BlockTerm>.statements) {
         evalStatement(t);
@@ -62,6 +62,8 @@ class gelly::Env {
       return lookupVar(exp.as<IdnTerm>.idn);
     } else if(exp instanceof StringTerm) {
       return new GLString(exp.as<StringTerm>.value);
+    } else if(exp instanceof BlockTerm) {
+      return new GLMethod("noname", new Array<String>(), exp.as<BlockTerm>);
     } else if(exp instanceof MessageSendTerm) {
       var ms = exp.as<MessageSendTerm>;
       var o = evalExp(ms.object);

@@ -11,6 +11,21 @@ external pil::reflect::Class gelly::reflect::typeOfGLClass ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfGLObject ( ) ;
 external pil::reflect::Class gelly::exception::reflect::typeOfNoSuchMethodException ( ) ;
 external pil::reflect::Class gelly::exception::reflect::typeOfNoSuchFieldException ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfEnv ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfIdnTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfStringTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfIntTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfAssignTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfMethodDefTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfBlockTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfMessageSendTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfTerm ( ) ;
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfDefineMethods ( ) ;
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfPrintMethod ( ) ;
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfDescribeMethod ( ) ;
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfGetFieldMethod ( ) ;
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfSetFieldMethod ( ) ;
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfNewInstanceMethod ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfField ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfMethod ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfParameterClass ( ) ;
@@ -40,6 +55,90 @@ external pil::reflect::Class pil::reflect::typeOfNumeric ( ) ;
 external pil::reflect::Class pil::reflect::typeOfBool ( ) ;
 external pil::reflect::Class reflect::typeOfNone ( ) ;
 external pil::reflect::Class pil::reflect::typeOfObject ( ) ;
+external gelly::GLClass gelly::builtin::object::init ( ) ;
+external class gelly::builtin::object::NewInstanceMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject o , pil::Array < gelly::GLObject > args ) ;
+}
+external class gelly::builtin::object::SetFieldMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject o , pil::Array < gelly::GLObject > args ) ;
+}
+external class gelly::builtin::object::GetFieldMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject o , pil::Array < gelly::GLObject > args ) ;
+}
+external class gelly::builtin::object::DescribeMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject o , pil::Array < gelly::GLObject > args ) ;
+}
+external class gelly::builtin::object::PrintMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject o , pil::Array < gelly::GLObject > args ) ;
+}
+external class gelly::builtin::object::DefineMethods extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject self , pil::Array < gelly::GLObject > args ) ;
+}
+external class gelly::Term extends pil::Object {
+    pil::String toIndentedString ( pil::Int depth ) ;
+}
+external pil::String gelly::util::spaces ( pil::Int n ) ;
+external class gelly::MessageSendTerm extends gelly::Term {
+    gelly::Term object ;
+    pil::String message ;
+    pil::Array < gelly::Term > arguments ;
+    new ( gelly::Term object , pil::String message , pil::Array < gelly::Term > arguments ) ;
+    pil::String toIndentedString ( pil::Int depth ) ;
+    as<pil::String>;
+}
+external class gelly::BlockTerm extends gelly::Term {
+    pil::Array < gelly::Term > statements ;
+    new ( pil::Array < gelly::Term > statements ) ;
+    pil::String toIndentedString ( pil::Int depth ) ;
+    as<pil::String>;
+}
+external class gelly::MethodDefTerm extends gelly::Term {
+    gelly::MessageSendTerm signature ;
+    pil::Array < gelly::Term > statements ;
+    new ( gelly::MessageSendTerm signature , pil::Array < gelly::Term > statements ) ;
+    pil::String toIndentedString ( pil::Int depth ) ;
+    as<pil::String>;
+}
+external class gelly::AssignTerm extends gelly::Term {
+    gelly::Term lhs ;
+    gelly::Term value ;
+    new ( gelly::Term lhs , gelly::Term value ) ;
+    pil::String toIndentedString ( pil::Int depth ) ;
+}
+external class gelly::IntTerm extends gelly::Term {
+    pil::Int value ;
+    new ( pil::Int value ) ;
+    pil::Bool == ( pil::Object o ) ;
+    as<pil::String>;
+}
+external class gelly::StringTerm extends gelly::Term {
+    pil::String value ;
+    new ( pil::String value ) ;
+    pil::Bool == ( pil::Object o ) ;
+    as<pil::String>;
+}
+external class gelly::IdnTerm extends gelly::Term {
+    pil::String idn ;
+    new ( pil::String idn ) ;
+    as<pil::String>;
+}
+external pil::Map < pil::String , gelly::GLClass > gelly::rootNamespace ;
+external void gelly::initInterpreter ( ) ;
+external class gelly::Env extends pil::Object {
+    gelly::GLObject self ;
+    pil::Map < pil::String , gelly::GLObject > variables ;
+    new ( gelly::GLObject self ) ;
+    gelly::GLObject lookupVar ( pil::String var ) ;
+    void evalBlock ( gelly::Term stats ) ;
+    void evalStatement ( gelly::Term stat ) ;
+    gelly::GLObject evalExp ( gelly::Term exp ) ;
+}
 external class gelly::exception::NoSuchFieldException extends pil::Exception {
     new ( pil::String field ) ;
 }
@@ -64,10 +163,10 @@ external class gelly::GLClass extends gelly::GLObject {
 }
 external class gelly::GLMethod extends gelly::GLObject {
     pil::Array < pil::String > argumentNames ;
-    pil::Array < gelly::Term > statements ;
+    gelly::BlockTerm block ;
     pil::String selector ;
-    new ( pil::String selector , pil::Array < pil::String > argumentNames , pil::Array < gelly::Term > statements ) ;
-    gelly::GLObject invoke ( gelly::GLObject o , pil::Array < gelly::GLObject > args ) ;
+    new ( pil::String selector , pil::Array < pil::String > argumentNames , gelly::BlockTerm block ) ;
+    gelly::GLObject invoke ( gelly::GLObject self , pil::Array < gelly::GLObject > args ) ;
 }
 external class gelly::GLString extends gelly::GLObject {
     pil::String value ;

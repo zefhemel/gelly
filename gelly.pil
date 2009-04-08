@@ -14,7 +14,7 @@ void main(Array<String> args) {
     var content = file.readAll();
     file.close();
     var parsed = new Parser(content).acceptStatements();
-    new Env(new GLObject(gelly::rootNamespace["Object"])).evalStatements(parsed);
+    new Env(new GLObject(gelly::rootNamespace["Object"])).evalBlock(parsed);
   } else {
     println("Welcome to gelly, type :q to quit.");
     while(input != ":q") {

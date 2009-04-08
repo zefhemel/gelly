@@ -10,11 +10,12 @@ GLClass gelly::builtin::object::init() {
   object.instanceMethods["get:"] = new gelly::builtin::object::GetFieldMethod();
   object.instanceMethods["describe"] = new gelly::builtin::object::DescribeMethod();
   object.instanceMethods["print:"] = new gelly::builtin::object::PrintMethod();
+  object.instanceMethods["defineMethods:"] = new gelly::builtin::object::DefineMethods();
   return object;
 }
 
 class gelly::builtin::object::NewInstanceMethod extends GLMethod {
-  new() extends super("new", new Array<String>(), new Array<Term>()) {
+  new() extends super("new", new Array<String>(), null) {
     this.cls = cls;
   }
 
@@ -24,7 +25,7 @@ class gelly::builtin::object::NewInstanceMethod extends GLMethod {
 }
 
 class gelly::builtin::object::SetFieldMethod extends GLMethod {
-  new() extends super("set:to:", new Array<String>("fieldName", "value"), new Array<Term>()) {
+  new() extends super("set:to:", new Array<String>("fieldName", "value"), null) {
   }
 
   GLObject invoke(GLObject o, Array<GLObject> args) {
@@ -35,7 +36,7 @@ class gelly::builtin::object::SetFieldMethod extends GLMethod {
 }
 
 class gelly::builtin::object::GetFieldMethod extends GLMethod {
-  new() extends super("get:", new Array<String>("fieldName"), new Array<Term>()) {
+  new() extends super("get:", new Array<String>("fieldName"), null) {
   }
 
   GLObject invoke(GLObject o, Array<GLObject> args) {
@@ -45,7 +46,7 @@ class gelly::builtin::object::GetFieldMethod extends GLMethod {
 }
 
 class gelly::builtin::object::DescribeMethod extends GLMethod {
-  new() extends super("describe", new Array<String>(), new Array<Term>()) {
+  new() extends super("describe", new Array<String>(), null) {
   }
 
   GLObject invoke(GLObject o, Array<GLObject> args) {
@@ -54,11 +55,29 @@ class gelly::builtin::object::DescribeMethod extends GLMethod {
 }
 
 class gelly::builtin::object::PrintMethod extends GLMethod {
-  new() extends super("print:", new Array<String>("str"), new Array<Term>()) {
+  new() extends super("print:", new Array<String>("str"), null) {
   }
 
   GLObject invoke(GLObject o, Array<GLObject> args) {
     println(args[0].as<String>);
     return o;
+  }
+}
+
+class gelly::builtin::object::DefineMethods extends GLMethod {
+  new() extends super("defineMethods:", new Array<String>("methods"), null) {
+  }
+
+  GLObject invoke(GLObject self, Array<GLObject> args) {
+    var method = args[0].as<GLMethod>;
+    for(MethodDefTerm mdt : method.block.statements) {
+      var argNames = new Array<String>(mdt.signature.arguments.length);
+      for(Int i = 0; i < argNames.length; i++) {
+        argNames[i] = mdt.signature.arguments[i].as<IdnTerm>.idn;
+      }
+      var newMethod = new GLMethod(mdt.signature.message, argNames, new BlockTerm(mdt.statements));
+      self.methods[mdt.signature.message] = newMethod;
+    }
+    return self;
   }
 }
