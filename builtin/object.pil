@@ -5,12 +5,16 @@ import gelly::exception
 
 GLClass gelly::builtin::object::init() {
   var object = new GLClass(null, "Object");
+
   object.methods["new"] = new gelly::builtin::object::NewInstanceMethod();
+  object.methods["defineInstanceMethods:"] = new gelly::builtin::object::DefineMethods(true);
+  object.methods["defineMethods:"] = new gelly::builtin::object::DefineMethods(false);
+
   object.instanceMethods["set:to:"] = new gelly::builtin::object::SetFieldMethod();
   object.instanceMethods["get:"] = new gelly::builtin::object::GetFieldMethod();
   object.instanceMethods["describe"] = new gelly::builtin::object::DescribeMethod();
   object.instanceMethods["print:"] = new gelly::builtin::object::PrintMethod();
-  object.instanceMethods["defineMethods:"] = new gelly::builtin::object::DefineMethods();
+  object.instanceMethods["defineMethods:"] = new gelly::builtin::object::DefineMethods(false);
   return object;
 }
 
@@ -65,7 +69,10 @@ class gelly::builtin::object::PrintMethod extends GLMethod {
 }
 
 class gelly::builtin::object::DefineMethods extends GLMethod {
-  new() extends super("defineMethods:", new Array<String>("methods"), null) {
+  Bool instanceMethods = true;
+
+  new(Bool instanceMethods) extends super("defineMethods:", new Array<String>("methods"), null) {
+    this.instanceMethods = instanceMethods;
   }
 
   GLObject invoke(GLObject self, Array<GLObject> args) {
@@ -76,7 +83,11 @@ class gelly::builtin::object::DefineMethods extends GLMethod {
         argNames[i] = mdt.signature.arguments[i].as<IdnTerm>.idn;
       }
       var newMethod = new GLMethod(mdt.signature.message, argNames, new BlockTerm(mdt.statements));
-      self.methods[mdt.signature.message] = newMethod;
+      if(self instanceof GLClass && instanceMethods) {
+        self.as<GLClass>.instanceMethods[mdt.signature.message] = newMethod;
+      } else {
+        self.methods[mdt.signature.message] = newMethod;
+      }
     }
     return self;
   }

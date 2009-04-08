@@ -15,5 +15,19 @@ defineMethods: [
      print: what + " " + whom;
    ]
 
+   addOne: n [
+     return: n + 1;
+   ]
+
 ];
 sayHello: "Zef";
+counter = 0;
+Int defineInstanceMethods: [
+  plusOne [
+    return: self + 1;
+  ]
+];
+counter = counter plusOne;
+counter = counter plusOne;
+counter = counter plusOne;
+print: counter;

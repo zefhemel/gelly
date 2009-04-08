@@ -1,0 +1,32 @@
+import "object.pil"
+
+import gelly
+import gelly::exception
+
+class gelly::GLInt extends GLObject {
+  Int value = 0;
+
+  new(Int value) extends super(rootNamespace["Int"]) {
+    this.value = value;
+  }
+
+  as<String> {
+    return value.as<String>;
+  }
+}
+
+GLClass gelly::builtin::int::init() {
+  var int = new GLClass(rootNamespace["Object"], "Int");
+  int.instanceMethods["+"] = new gelly::builtin::int::AddMethod();
+  return int;
+}
+
+class gelly::builtin::int::AddMethod extends GLMethod {
+  new() extends super("+", new Array<String>("other"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLInt(o.as<GLInt>.value + args[0].as<GLInt>.value);
+  }
+}
+

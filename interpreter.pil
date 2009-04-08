@@ -2,6 +2,7 @@ import "ast.pil"
 import "object.pil"
 import "builtin/object.pil"
 import "builtin/string.pil"
+import "builtin/int.pil"
 
 import gelly
 import gelly::exception
@@ -15,12 +16,14 @@ void gelly::initInterpreter() {
   var method = new GLClass(object, "Method");
   rootNamespace["Method"] = object;
   rootNamespace["String"] = gelly::builtin::string::init();
+  rootNamespace["Int"] = gelly::builtin::int::init();
 }
 
 
 class gelly::Env {
   GLObject self = null;
   Map<String, GLObject> variables = new Map<String, GLObject>();
+  GLObject returnValue = null;
 
   new(GLObject self) {
     this.self = self;
@@ -48,13 +51,14 @@ class gelly::Env {
     }
   }
 
-  void evalStatement(Term stat) {
+  GLObject evalStatement(Term stat) {
     if(stat instanceof AssignTerm) {
       var assign = stat.as<AssignTerm>;
       variables[assign.lhs.as<IdnTerm>.idn] = evalExp(assign.value);
     } else {
       evalExp(stat);
     }
+    return returnValue;
   }
 
   GLObject evalExp(Term exp) {
@@ -62,15 +66,24 @@ class gelly::Env {
       return lookupVar(exp.as<IdnTerm>.idn);
     } else if(exp instanceof StringTerm) {
       return new GLString(exp.as<StringTerm>.value);
+    } else if(exp instanceof IntTerm) {
+      return new GLInt(exp.as<IntTerm>.value);
     } else if(exp instanceof BlockTerm) {
       return new GLMethod("noname", new Array<String>(), exp.as<BlockTerm>);
     } else if(exp instanceof MessageSendTerm) {
       var ms = exp.as<MessageSendTerm>;
       var o = evalExp(ms.object);
-      var method = o.getMethod(ms.message);
       var args = new Array<GLObject>(ms.arguments.length);
       for(Int i = 0; i < ms.arguments.length; i++) {
         args[i] = evalExp(ms.arguments[i]);
+      }
+      if(ms.message == "return:") {
+        returnValue = args[0];
+        return returnValue;
+      }
+      var method = o.getMethod(ms.message);
+      if(method == null) {
+        throw new NoSuchMethodException(ms.message);
       }
       return method.invoke(o, args);
     } else {

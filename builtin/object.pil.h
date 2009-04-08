@@ -56,6 +56,8 @@ external pil::reflect::Class gelly::reflect::typeOfBlockTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfMessageSendTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfTerm ( ) ;
 external pil::reflect::Class gelly::builtin::string::reflect::typeOfStringConcatMethod ( ) ;
+external pil::reflect::Class gelly::builtin::int::reflect::typeOfAddMethod ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfGLInt ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfField ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfMethod ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfParameterClass ( ) ;
@@ -85,6 +87,16 @@ external pil::reflect::Class pil::reflect::typeOfNumeric ( ) ;
 external pil::reflect::Class pil::reflect::typeOfBool ( ) ;
 external pil::reflect::Class reflect::typeOfNone ( ) ;
 external pil::reflect::Class pil::reflect::typeOfObject ( ) ;
+external class gelly::GLInt extends gelly::GLObject {
+    pil::Int value ;
+    new ( pil::Int value ) ;
+    as<pil::String>;
+}
+external gelly::GLClass gelly::builtin::int::init ( ) ;
+external class gelly::builtin::int::AddMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject o , pil::Array < gelly::GLObject > args ) ;
+}
 external gelly::GLClass gelly::builtin::string::init ( ) ;
 external class gelly::builtin::string::StringConcatMethod extends gelly::GLMethod {
     new ( ) ;
@@ -143,10 +155,11 @@ external void gelly::initInterpreter ( ) ;
 external class gelly::Env extends pil::Object {
     gelly::GLObject self ;
     pil::Map < pil::String , gelly::GLObject > variables ;
+    gelly::GLObject returnValue ;
     new ( gelly::GLObject self ) ;
     gelly::GLObject lookupVar ( pil::String var ) ;
     void evalBlock ( gelly::Term stats ) ;
-    void evalStatement ( gelly::Term stat ) ;
+    gelly::GLObject evalStatement ( gelly::Term stat ) ;
     gelly::GLObject evalExp ( gelly::Term exp ) ;
 }
 external class gelly::exception::NoSuchFieldException extends pil::Exception {
@@ -170,6 +183,7 @@ external class gelly::GLClass extends gelly::GLObject {
     pil::String name ;
     pil::Map < pil::String , gelly::GLMethod > instanceMethods ;
     new ( gelly::GLClass superClass , pil::String name ) ;
+    gelly::GLMethod getMethod ( pil::String selector ) ;
 }
 external class gelly::GLMethod extends gelly::GLObject {
     pil::Array < pil::String > argumentNames ;
@@ -210,7 +224,10 @@ external class gelly::builtin::object::PrintMethod extends gelly::GLMethod {
     pil::reflect::Class getClassInfo ( ) ;
 }
 external class gelly::builtin::object::DefineMethods extends gelly::GLMethod {
-    new ( ) ;
+    pil::Bool instanceMethods ;
+    new ( pil::Bool instanceMethods ) ;
     gelly::GLObject invoke ( gelly::GLObject self , pil::Array < gelly::GLObject > args ) ;
     pil::reflect::Class getClassInfo ( ) ;
+    pil::Bool getInstanceMethods ( ) ;
+    void setInstanceMethods ( pil::Bool value ) ;
 }
