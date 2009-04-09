@@ -1,0 +1,122 @@
+import "interpreter.pil"
+
+import gelly
+import gelly::exception
+
+class gelly::exception::NoSuchFieldException extends Exception { 
+  new(String field) extends super(field) {
+  }
+}
+
+class gelly::exception::NoSuchMethodException extends Exception {
+  new(String method) extends super(method) {
+  }
+}
+
+class gelly::GLObject {
+  GLClass cls = null;
+  Map<String, GLMethod> methods = new Map<String, GLMethod>();
+  Map<String, GLObject> fields = new Map<String, GLObject>();
+
+  new(GLClass cls) {
+    this.cls = cls;
+  }
+
+  GLMethod getMethod(String selector) {
+    if(methods.contains(selector)) {
+      return methods[selector];
+    }
+    var curCls = this.cls;
+    while(curCls != null && !curCls.instanceMethods.contains(selector)) {
+      curCls = curCls.superClass;
+    }
+    if(curCls == null) {
+      throw new NoSuchMethodException(selector);
+    } else {
+      return curCls.instanceMethods[selector];
+    }
+  }
+  
+  GLObject getField(String name) {
+    if(!fields.contains(name)) {
+      throw new NoSuchFieldException(name);
+    } else {
+      return fields[name];
+    }
+  }
+
+  void setField(String name, GLObject value) {
+    fields[name] = value;
+  }
+
+  as<String> {
+    var s = new MutableString();
+    s.append("I'm an object of type " + cls.name + " I contain the following fields: ");
+    for(String field : fields.keys) {
+      s.append(field);
+      s.append(' ');
+    }
+    return s.as<String>;
+  }
+}
+
+class gelly::GLClass extends GLObject {
+  GLClass superClass = null;
+  String name = null;
+  Map<String, GLMethod> instanceMethods = new Map<String, GLMethod>();
+
+  new(GLClass superClass, String name) extends super(rootNamespace["Object"]) {
+    this.superClass = superClass;
+    this.name = name;
+  }
+
+  GLMethod getMethod(String selector) {
+    var curCls = this;
+    while(curCls != null && !curCls.methods.contains(selector)) {
+      curCls = curCls.superClass;
+    }
+    if(curCls == null) {
+      throw new NoSuchMethodException(selector);
+    } else {
+      return curCls.methods[selector];
+    }
+  }
+}
+
+class gelly::GLMethod extends GLObject {
+  Array<String> argumentNames = null;
+  BlockTerm block = null;
+  String selector = null;
+
+  new(String selector, Array<String> argumentNames, BlockTerm block) extends super(rootNamespace["Method"]){
+    this.argumentNames = argumentNames;
+    this.block = block;
+    this.selector = null;
+  }
+
+  GLObject invoke(GLObject self, Array<GLObject> args) {
+    var env = new Env(self);
+    for(Int i = 0; i < argumentNames.length; i++) {
+      env.variables[argumentNames[i]] = args[i];
+    }
+    env.evalBlock(block);
+    if(env.returnValue != null) {
+      return env.returnValue;
+    } else {
+      return self;
+    }
+  }
+}
+
+class gelly::GLString extends GLObject {
+  String value = null;
+
+  new(String value) extends super(rootNamespace["String"]) {
+    this.value = value;
+  }
+
+  as<String> {
+    return value;
+  }
+}
+
