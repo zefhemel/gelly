@@ -66,7 +66,7 @@ class gelly::Parser {
     var oldI = i;
     acceptWhiteSpace();
     if(accept('[')) {
-      acceptWhiteSpace();
+      acceptAnyWhiteSpace();
       var stats = new List<Term>();
       while(!accept(']')) {
         var stat = acceptStatement();
@@ -75,12 +75,11 @@ class gelly::Parser {
           throw new ParseException("Expected a statement, couln't parse it.");
         }
         stats.add(stat);
-        acceptWhiteSpace();
-        if(!accept(';')) {
+        if(!acceptNewline()) {
           i = oldI;
           return null;
         } else {
-          acceptWhiteSpace();
+          acceptAnyWhiteSpace();
         }
       }
       return new BlockTerm(stats.as<Array<Term>>);
@@ -91,7 +90,7 @@ class gelly::Parser {
   Term acceptDeclBlock() {
     var oldI = i;
     if(accept('[')) {
-      acceptWhiteSpace();
+      acceptAnyWhiteSpace();
       var decls = new List<Term>();
       while(!accept(']')) {
         String postfixMethodname = acceptIdnNoKeyword();
@@ -112,7 +111,7 @@ class gelly::Parser {
           return null;
         }
         decls.add(new MethodDefTerm(sig, b.statements));
-        acceptWhiteSpace();
+        acceptAnyWhiteSpace();
       }
       return new BlockTerm(decls.as<Array<Term>>);
     }
@@ -283,6 +282,10 @@ class gelly::Parser {
       t = acceptAssign();
       if(t == null) {
         t = acceptExp();
+        if(t == null) {
+          printRest();
+          throw new ParseException("Could not parse exception.");
+        }
       }
     } else {
       t.as<MessageSendTerm>.object = new IdnTerm("self");
@@ -293,15 +296,13 @@ class gelly::Parser {
   BlockTerm acceptStatements() {
     acceptWhiteSpace();
     var stats = new List<Term>();
-    while(i < text.length) {
+    while(i < text.length-1) {
       var exp = acceptStatement();
       stats.add(exp);
       acceptWhiteSpace();
-      if(!accept(';')) {
+      if(!acceptNewline()) {
         printRest();
-        throw new ParseException("; expected");
-      } else {
-        acceptWhiteSpace();
+        throw new ParseException("new line expected");
       }
     }
     return new BlockTerm(stats.as<Array<Term>>);
@@ -312,11 +313,12 @@ class gelly::Parser {
 
   Bool acceptWhiteSpace() {
     var oldI = i;
-    while(i < text.length && (text[i] == ' ' || text[i] == '\t' || text[i] == '\n' || text[i] == '\r' || lookAhead("//") || lookAhead("/*"))) { 
+    while(i < text.length && (text[i] == ' ' || text[i] == '\t' || lookAhead("//") || lookAhead("/*"))) { 
       if(lookAhead("//")) {
         while(i < text.length && text[i] != '\n' && text[i] != '\r') {
           i++;
         }
+        i--;
       } else if(lookAhead("/*")) {
         while(i < text.length && !lookAhead("*/")) {
           i++;
@@ -329,6 +331,26 @@ class gelly::Parser {
       }
     }
     return oldI != i;
+  }
+
+  Bool acceptAnyWhiteSpace() {
+    var oldI = i;
+    while(acceptWhiteSpace() || acceptNewline()) {
+    }
+    return oldI != i;
+  }
+
+  Bool acceptNewline() {
+    acceptWhiteSpace();
+    if(i == text.length || text[i] == '\n' || text[i] == '\r' || text[i] == ';') {
+      if(i < text.length) { 
+        i++;
+        acceptWhiteSpace();
+      }
+      return true;
+    } else {
+      return false;
+    }
   }
 
   void printRest() {

@@ -102,7 +102,6 @@ class gelly::builtin::object::SubclassMethod extends GLMethod {
       var newMethod = new GLMethod(mdt.signature.selector, mdt.signature.arguments, new BlockTerm(mdt.statements));
       cls.instanceMethods[mdt.signature.selector] = newMethod;
     }
-    println("Defined class: " + className);
     rootNamespace[className] = cls;
     return cls;
   }
