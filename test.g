@@ -18,7 +18,6 @@ defineMethods: [
    addOne: n [
      return: n + 1;
    ]
-
 ];
 sayHello: "Zef";
 counter = 0;
@@ -31,3 +30,11 @@ counter = counter plusOne;
 counter = counter plusOne;
 counter = counter plusOne;
 print: counter;
+Object subClass: "User" withMethods: [
+  init [
+    set: "name" to: "unkown";
+    set: "age" to: 0;
+  ]
+];
+zef = User new init;
+print: (zef get: "name");

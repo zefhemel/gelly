@@ -1,3 +1,10 @@
+external class gelly::builtin::object::reflect::SubclassMethodClassInfo extends pil::reflect::Class {
+    pil::reflect::Class getSuperClass ( ) ;
+    pil::String getQualifiedId ( ) ;
+    pil::Array < pil::reflect::Field > getFields ( ) ;
+    pil::Array < pil::reflect::Method > getMethods ( ) ;
+}
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfSubclassMethod ( ) ;
 external class gelly::builtin::object::reflect::DefineMethodsClassInfo extends pil::reflect::Class {
     pil::reflect::Class getSuperClass ( ) ;
     pil::String getQualifiedId ( ) ;
@@ -51,6 +58,7 @@ external pil::reflect::Class gelly::reflect::typeOfIdnTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfStringTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfIntTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfAssignTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfMethodSignature ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfMethodDefTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfBlockTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfMessageSendTerm ( ) ;
@@ -108,9 +116,9 @@ external class gelly::Term extends pil::Object {
 external pil::String gelly::util::spaces ( pil::Int n ) ;
 external class gelly::MessageSendTerm extends gelly::Term {
     gelly::Term object ;
-    pil::String message ;
+    pil::String selector ;
     pil::Array < gelly::Term > arguments ;
-    new ( gelly::Term object , pil::String message , pil::Array < gelly::Term > arguments ) ;
+    new ( gelly::Term object , pil::String selector , pil::Array < gelly::Term > arguments ) ;
     pil::String toIndentedString ( pil::Int depth ) ;
     as<pil::String>;
 }
@@ -121,11 +129,16 @@ external class gelly::BlockTerm extends gelly::Term {
     as<pil::String>;
 }
 external class gelly::MethodDefTerm extends gelly::Term {
-    gelly::MessageSendTerm signature ;
+    gelly::MethodSignature signature ;
     pil::Array < gelly::Term > statements ;
-    new ( gelly::MessageSendTerm signature , pil::Array < gelly::Term > statements ) ;
+    new ( gelly::MethodSignature signature , pil::Array < gelly::Term > statements ) ;
     pil::String toIndentedString ( pil::Int depth ) ;
     as<pil::String>;
+}
+external class gelly::MethodSignature extends gelly::Term {
+    pil::String selector ;
+    pil::Array < pil::String > arguments ;
+    new ( pil::String selector , pil::Array < pil::String > arguments ) ;
 }
 external class gelly::AssignTerm extends gelly::Term {
     gelly::Term lhs ;
@@ -230,4 +243,9 @@ external class gelly::builtin::object::DefineMethods extends gelly::GLMethod {
     pil::reflect::Class getClassInfo ( ) ;
     pil::Bool getInstanceMethods ( ) ;
     void setInstanceMethods ( pil::Bool value ) ;
+}
+external class gelly::builtin::object::SubclassMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject self , pil::Array < gelly::GLObject > args ) ;
+    pil::reflect::Class getClassInfo ( ) ;
 }

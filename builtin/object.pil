@@ -9,6 +9,7 @@ GLClass gelly::builtin::object::init() {
   object.methods["new"] = new gelly::builtin::object::NewInstanceMethod();
   object.methods["defineInstanceMethods:"] = new gelly::builtin::object::DefineMethods(true);
   object.methods["defineMethods:"] = new gelly::builtin::object::DefineMethods(false);
+  object.methods["subClass:withMethods:"] = new gelly::builtin::object::SubclassMethod();
 
   object.instanceMethods["set:to:"] = new gelly::builtin::object::SetFieldMethod();
   object.instanceMethods["get:"] = new gelly::builtin::object::GetFieldMethod();
@@ -78,17 +79,31 @@ class gelly::builtin::object::DefineMethods extends GLMethod {
   GLObject invoke(GLObject self, Array<GLObject> args) {
     var method = args[0].as<GLMethod>;
     for(MethodDefTerm mdt : method.block.statements) {
-      var argNames = new Array<String>(mdt.signature.arguments.length);
-      for(Int i = 0; i < argNames.length; i++) {
-        argNames[i] = mdt.signature.arguments[i].as<IdnTerm>.idn;
-      }
-      var newMethod = new GLMethod(mdt.signature.message, argNames, new BlockTerm(mdt.statements));
+      var newMethod = new GLMethod(mdt.signature.selector, mdt.signature.arguments, new BlockTerm(mdt.statements));
       if(self instanceof GLClass && instanceMethods) {
-        self.as<GLClass>.instanceMethods[mdt.signature.message] = newMethod;
+        self.as<GLClass>.instanceMethods[mdt.signature.selector] = newMethod;
       } else {
-        self.methods[mdt.signature.message] = newMethod;
+        self.methods[mdt.signature.selector] = newMethod;
       }
     }
     return self;
+  }
+}
+
+class gelly::builtin::object::SubclassMethod extends GLMethod {
+  new() extends super("subClass:withMethods:", new Array<String>("className", "methods"), null) {
+  }
+
+  GLObject invoke(GLObject self, Array<GLObject> args) {
+    var className = args[0].as<GLString>.value;
+    var definitions = args[1].as<GLMethod>; 
+    var cls = new GLClass(self.as<GLClass>, className);
+    for(MethodDefTerm mdt : definitions.block.statements) {
+      var newMethod = new GLMethod(mdt.signature.selector, mdt.signature.arguments, new BlockTerm(mdt.statements));
+      cls.instanceMethods[mdt.signature.selector] = newMethod;
+    }
+    println("Defined class: " + className);
+    rootNamespace[className] = cls;
+    return cls;
   }
 }

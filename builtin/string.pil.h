@@ -16,10 +16,12 @@ external pil::reflect::Class gelly::reflect::typeOfIdnTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfStringTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfIntTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfAssignTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfMethodSignature ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfMethodDefTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfBlockTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfMessageSendTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfTerm ( ) ;
+external pil::reflect::Class gelly::builtin::object::reflect::typeOfSubclassMethod ( ) ;
 external pil::reflect::Class gelly::builtin::object::reflect::typeOfDefineMethods ( ) ;
 external pil::reflect::Class gelly::builtin::object::reflect::typeOfPrintMethod ( ) ;
 external pil::reflect::Class gelly::builtin::object::reflect::typeOfDescribeMethod ( ) ;
@@ -93,15 +95,19 @@ external class gelly::builtin::object::DefineMethods extends gelly::GLMethod {
     new ( pil::Bool instanceMethods ) ;
     gelly::GLObject invoke ( gelly::GLObject self , pil::Array < gelly::GLObject > args ) ;
 }
+external class gelly::builtin::object::SubclassMethod extends gelly::GLMethod {
+    new ( ) ;
+    gelly::GLObject invoke ( gelly::GLObject self , pil::Array < gelly::GLObject > args ) ;
+}
 external class gelly::Term extends pil::Object {
     pil::String toIndentedString ( pil::Int depth ) ;
 }
 external pil::String gelly::util::spaces ( pil::Int n ) ;
 external class gelly::MessageSendTerm extends gelly::Term {
     gelly::Term object ;
-    pil::String message ;
+    pil::String selector ;
     pil::Array < gelly::Term > arguments ;
-    new ( gelly::Term object , pil::String message , pil::Array < gelly::Term > arguments ) ;
+    new ( gelly::Term object , pil::String selector , pil::Array < gelly::Term > arguments ) ;
     pil::String toIndentedString ( pil::Int depth ) ;
     as<pil::String>;
 }
@@ -112,11 +118,16 @@ external class gelly::BlockTerm extends gelly::Term {
     as<pil::String>;
 }
 external class gelly::MethodDefTerm extends gelly::Term {
-    gelly::MessageSendTerm signature ;
+    gelly::MethodSignature signature ;
     pil::Array < gelly::Term > statements ;
-    new ( gelly::MessageSendTerm signature , pil::Array < gelly::Term > statements ) ;
+    new ( gelly::MethodSignature signature , pil::Array < gelly::Term > statements ) ;
     pil::String toIndentedString ( pil::Int depth ) ;
     as<pil::String>;
+}
+external class gelly::MethodSignature extends gelly::Term {
+    pil::String selector ;
+    pil::Array < pil::String > arguments ;
+    new ( pil::String selector , pil::Array < pil::String > arguments ) ;
 }
 external class gelly::AssignTerm extends gelly::Term {
     gelly::Term lhs ;

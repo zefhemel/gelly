@@ -64,12 +64,17 @@ class gelly::Parser {
 
   BlockTerm acceptBlock() {
     var oldI = i;
+    acceptWhiteSpace();
     if(accept('[')) {
       acceptWhiteSpace();
       var stats = new List<Term>();
       while(!accept(']')) {
-        var exp = acceptStatement();
-        stats.add(exp);
+        var stat = acceptStatement();
+        if(stat == null) {
+          printRest();
+          throw new ParseException("Expected a statement, couln't parse it.");
+        }
+        stats.add(stat);
         acceptWhiteSpace();
         if(!accept(';')) {
           i = oldI;
@@ -89,9 +94,12 @@ class gelly::Parser {
       acceptWhiteSpace();
       var decls = new List<Term>();
       while(!accept(']')) {
-        var sig = acceptPostfixNoObject();
-        if(sig == null) {
-          sig = acceptMSNoObject();
+        String postfixMethodname = acceptIdnNoKeyword();
+        MethodSignature sig = null;
+        if(postfixMethodname != null) {
+          sig = new MethodSignature(postfixMethodname, new Array<String>());
+        } else {
+          sig = acceptKeywordMethodSignature();
           if(sig == null) {
             oldI = i;
             return null;
@@ -103,12 +111,32 @@ class gelly::Parser {
           i = oldI;
           return null;
         }
-        decls.add(new MethodDefTerm(sig.as<MessageSendTerm>, b.statements));
+        decls.add(new MethodDefTerm(sig, b.statements));
         acceptWhiteSpace();
       }
       return new BlockTerm(decls.as<Array<Term>>);
     }
     return null;
+  }
+
+  MethodSignature acceptKeywordMethodSignature() {
+    var selector = new MutableString();
+    var args = new List<String>();
+    acceptWhiteSpace();
+    var kw = acceptKeyword();
+    while(kw != null) {
+      selector.append(kw);
+      acceptWhiteSpace();
+      var arg = acceptIdnNoKeyword();
+      args.add(arg);
+      acceptWhiteSpace();
+      kw = acceptKeyword();
+    }
+    if(args.length > 0) {
+      return new MethodSignature(selector.as<String>, args.as<Array<String>>);
+    } else {
+      return null;
+    }
   }
 
   Term acceptGeneric(Int level) {
@@ -129,6 +157,10 @@ class gelly::Parser {
     while(op != null) {
       Term t2 = null;
       t2 = acceptGeneric(level);
+      if(t2 == null) {
+        printRest();
+        throw new ParseException("Expected an expression.");
+      }
       t = new MessageSendTerm(t, op, new Array<Term>(t2));
       oldI = i;
       op = acceptOps(operators[level]);
@@ -142,16 +174,33 @@ class gelly::Parser {
     var t = acceptGeneric(operators.length-1);
     var oldI = i;
     acceptWhiteSpace();
-    var idn = acceptIdn();
-    if(idn != null && !accept(':')) {
-      return new MessageSendTerm(t, idn, new Array<Term>());
-    } else {
-      i = oldI;
-      return t;
+    var idn = acceptIdnNoKeyword();
+    while(idn != null) {
+      t = new MessageSendTerm(t, idn, new Array<Term>());
+      oldI = i;
+      acceptWhiteSpace();
+      idn = acceptIdnNoKeyword();
     }
+    i = oldI;
+    return t;
   }
 
   Term acceptPostfixNoObject() {
+    Term t = null;
+    var oldI = i;
+    acceptWhiteSpace();
+    printRest();
+    var idn = acceptIdnNoKeyword();
+    while(idn != null) {
+      t = new MessageSendTerm(t, idn, new Array<Term>());
+      oldI = i;
+      acceptWhiteSpace();
+      printRest();
+      idn = acceptIdnNoKeyword();
+    }
+    i = oldI;
+    return t;
+    /*
     var oldI = i;
     var idn = acceptIdn();
     if(idn != null && !accept(':')) {
@@ -160,6 +209,7 @@ class gelly::Parser {
       i = oldI;
       return null;
     }
+    */
   }
 
   Term acceptMS() {
@@ -399,6 +449,17 @@ class gelly::Parser {
       print("Rest of the buffer: ");
       printRest();
       throw new ParseException("Expected: " + c.as<String>);
+    }
+  }
+
+  String acceptIdnNoKeyword() {
+    var oldI = i;
+    var idn = acceptIdn();
+    if(idn != null && !accept(':')) {
+      return idn;
+    } else {
+      i = oldI;
+      return null;
     }
   }
 

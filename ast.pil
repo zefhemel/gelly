@@ -17,12 +17,12 @@ String gelly::util::spaces(Int n) {
 
 class gelly::MessageSendTerm extends gelly::Term {
   Term object = null;
-  String message = null;
+  String selector = null;
   Array<Term> arguments = null;
 
-  new(Term object, String message, Array<Term> arguments) {
+  new(Term object, String selector, Array<Term> arguments) {
     this.object = object;
-    this.message = message;
+    this.selector = selector;
     this.arguments = arguments;
   }
 
@@ -34,7 +34,7 @@ class gelly::MessageSendTerm extends gelly::Term {
       s.append(object.as<String>);
       s.append(" ");
     }
-    s.append(message);
+    s.append(selector);
     var sawCons = false;
     for(Term t: arguments) {
       if(t instanceof MessageSendTerm) {
@@ -79,10 +79,10 @@ class gelly::BlockTerm extends gelly::Term {
 }
 
 class gelly::MethodDefTerm extends gelly::Term {
-  MessageSendTerm signature = null;
+  MethodSignature signature = null;
   Array<Term> statements = null;
 
-  new(MessageSendTerm signature, Array<Term> statements) {
+  new(MethodSignature signature, Array<Term> statements) {
     this.signature = signature;
     this.statements = statements;
   }
@@ -102,6 +102,16 @@ class gelly::MethodDefTerm extends gelly::Term {
 
   as<String> {
     return toIndentedString(0);
+  }
+}
+
+class gelly::MethodSignature extends gelly::Term {
+  String selector = null;
+  Array<String> arguments = null;
+
+  new(String selector, Array<String> arguments) {
+    this.selector = selector;
+    this.arguments = arguments;
   }
 }
 

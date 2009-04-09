@@ -77,13 +77,13 @@ class gelly::Env {
       for(Int i = 0; i < ms.arguments.length; i++) {
         args[i] = evalExp(ms.arguments[i]);
       }
-      if(ms.message == "return:") {
+      if(ms.selector == "return:") {
         returnValue = args[0];
         return returnValue;
       }
-      var method = o.getMethod(ms.message);
+      var method = o.getMethod(ms.selector);
       if(method == null) {
-        throw new NoSuchMethodException(ms.message);
+        throw new NoSuchMethodException(ms.selector);
       }
       return method.invoke(o, args);
     } else {
