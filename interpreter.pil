@@ -3,6 +3,7 @@ import "object.pil"
 import "builtin/object.pil"
 import "builtin/string.pil"
 import "builtin/int.pil"
+import "builtin/bool.pil"
 
 import gelly
 import gelly::exception
@@ -17,6 +18,7 @@ void gelly::initInterpreter() {
   rootNamespace["Method"] = object;
   rootNamespace["String"] = gelly::builtin::string::init();
   rootNamespace["Int"] = gelly::builtin::int::init();
+  rootNamespace["Bool"] = gelly::builtin::bool::init();
 }
 
 
@@ -41,11 +43,13 @@ class gelly::Env {
     }
   }
 
-  void evalBlock(Term stats) {
+  GLObject evalBlock(Term stats) {
     if(stats instanceof BlockTerm) {
+      GLObject lastValue = null;
       for(Term t : stats.as<BlockTerm>.statements) {
-        evalStatement(t);
+        lastValue = evalStatement(t);
       }
+      return lastValue;
     } else {
       throw new Exception("Can't handle: " + stats.as<String>);
     }
@@ -55,10 +59,10 @@ class gelly::Env {
     if(stat instanceof AssignTerm) {
       var assign = stat.as<AssignTerm>;
       variables[assign.lhs.as<IdnTerm>.idn] = evalExp(assign.value);
+      return null;
     } else {
-      evalExp(stat);
+      return evalExp(stat);
     }
-    return returnValue;
   }
 
   GLObject evalExp(Term exp) {
@@ -68,8 +72,12 @@ class gelly::Env {
       return new GLString(exp.as<StringTerm>.value);
     } else if(exp instanceof IntTerm) {
       return new GLInt(exp.as<IntTerm>.value);
+    } else if(exp instanceof BoolTerm) {
+      return new GLBool(exp.as<BoolTerm>.value);
     } else if(exp instanceof BlockTerm) {
-      return new GLMethod("noname", new Array<String>(), exp.as<BlockTerm>);
+      var m = new GLMethod("noname", new Array<String>(), exp.as<BlockTerm>);
+      m.closure = this;
+      return m;
     } else if(exp instanceof MessageSendTerm) {
       var ms = exp.as<MessageSendTerm>;
       var o = evalExp(ms.object);
@@ -89,5 +97,12 @@ class gelly::Env {
     } else {
       throw new Exception("Unsupported expression: " + exp.as<String>);
     }
+  }
+
+  Env lightClone(GLObject self) {
+    var e = new Env(self);
+    e.variables = variables;
+    e.returnValue = returnValue;
+    return e;
   }
 }

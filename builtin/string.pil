@@ -3,6 +3,29 @@ import "object.pil"
 import gelly
 import gelly::exception
 
+class gelly::GLString extends GLObject {
+  String value = null;
+
+  new(String value) extends super(rootNamespace["String"]) {
+    this.value = value;
+  }
+
+  as<String> {
+    return value;
+  }
+
+  Bool ==(Object other) {
+    if(other == null) {
+      return false;
+    }
+    if(other instanceof GLString) {
+      return value == other.as<GLString>.value;
+    } else {
+      return false;
+    }
+  }
+}
+
 GLClass gelly::builtin::string::init() {
   var string = new GLClass(rootNamespace["Object"], "String");
   string.instanceMethods["+"] = new gelly::builtin::string::StringConcatMethod();

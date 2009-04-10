@@ -1,0 +1,33 @@
+import "object.pil"
+
+import gelly
+import gelly::exception
+
+class gelly::GLBool extends GLObject {
+  Bool value = false;
+
+  new(Bool value) extends super(rootNamespace["Bool"]) {
+    this.value = value;
+  }
+
+  as<String> {
+    return value.as<String>;
+  }
+
+  Bool ==(Object other) {
+    if(other == null) {
+      return false;
+    }
+    if(other instanceof GLBool) {
+      return value == other.as<GLBool>.value;
+    } else {
+      return false;
+    }
+  }
+}
+
+GLClass gelly::builtin::bool::init() {
+  var bool = new GLClass(rootNamespace["Object"], "Bool");
+  return bool;
+}
+

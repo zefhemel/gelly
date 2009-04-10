@@ -13,11 +13,27 @@ class gelly::GLInt extends GLObject {
   as<String> {
     return value.as<String>;
   }
+
+  Bool ==(Object other) {
+    if(other == null) {
+      return false;
+    }
+    if(other instanceof GLInt) {
+      return value == other.as<GLInt>.value;
+    } else {
+      return false;
+    }
+  }
 }
 
 GLClass gelly::builtin::int::init() {
   var int = new GLClass(rootNamespace["Object"], "Int");
   int.instanceMethods["+"] = new gelly::builtin::int::AddMethod();
+  int.instanceMethods["-"] = new gelly::builtin::int::SubstractMethod();
+  int.instanceMethods["*"] = new gelly::builtin::int::MultiplyMethod();
+
+  int.instanceMethods["<="] = new gelly::builtin::int::LessEqualMethod();
+  int.instanceMethods[">="] = new gelly::builtin::int::GreaterEqualMethod();
   return int;
 }
 
@@ -30,3 +46,38 @@ class gelly::builtin::int::AddMethod extends GLMethod {
   }
 }
 
+class gelly::builtin::int::SubstractMethod extends GLMethod {
+  new() extends super("-", new Array<String>("other"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLInt(o.as<GLInt>.value - args[0].as<GLInt>.value);
+  }
+}
+
+class gelly::builtin::int::MultiplyMethod extends GLMethod {
+  new() extends super("*", new Array<String>("other"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLInt(o.as<GLInt>.value * args[0].as<GLInt>.value);
+  }
+}
+
+class gelly::builtin::int::LessEqualMethod extends GLMethod {
+  new() extends super("<=", new Array<String>("other"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLBool(o.as<GLInt>.value <= args[0].as<GLInt>.value);
+  }
+}
+
+class gelly::builtin::int::GreaterEqualMethod extends GLMethod {
+  new() extends super(">=", new Array<String>("other"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLBool(o.as<GLInt>.value >= args[0].as<GLInt>.value);
+  }
+}

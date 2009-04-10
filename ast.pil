@@ -1,11 +1,7 @@
+import "object.pil"
+
 import gelly
 import gelly::util
-
-class gelly::Term {
-  String toIndentedString(Int depth) {
-    return this.as<String>;
-  }
-}
 
 String gelly::util::spaces(Int n) {
   var m = new MutableString();
@@ -15,12 +11,21 @@ String gelly::util::spaces(Int n) {
   return m.as<String>;
 }
 
+class gelly::Term extends GLObject {
+  new(GLClass instanceOf) extends super(instanceOf) {
+  }
+
+  String toIndentedString(Int depth) {
+    return this.as<String>;
+  }
+}
+
 class gelly::MessageSendTerm extends gelly::Term {
   Term object = null;
   String selector = null;
   Array<Term> arguments = null;
 
-  new(Term object, String selector, Array<Term> arguments) {
+  new(Term object, String selector, Array<Term> arguments) extends super(rootNamespace["ASTMessageSend"]) {
     this.object = object;
     this.selector = selector;
     this.arguments = arguments;
@@ -57,7 +62,7 @@ class gelly::MessageSendTerm extends gelly::Term {
 class gelly::BlockTerm extends gelly::Term {
   Array<Term> statements = null;
 
-  new(Array<Term> statements) {
+  new(Array<Term> statements) extends super(rootNamespace["ASTBlock"]) {
     this.statements = statements;
   }
 
@@ -82,7 +87,7 @@ class gelly::MethodDefTerm extends gelly::Term {
   MethodSignature signature = null;
   Array<Term> statements = null;
 
-  new(MethodSignature signature, Array<Term> statements) {
+  new(MethodSignature signature, Array<Term> statements) extends super(rootNamespace["ASTMethodDef"]) {
     this.signature = signature;
     this.statements = statements;
   }
@@ -109,7 +114,7 @@ class gelly::MethodSignature extends gelly::Term {
   String selector = null;
   Array<String> arguments = null;
 
-  new(String selector, Array<String> arguments) {
+  new(String selector, Array<String> arguments) extends super(rootNamespace["ASTMethodSignature"]) {
     this.selector = selector;
     this.arguments = arguments;
   }
@@ -119,7 +124,7 @@ class gelly::AssignTerm extends gelly::Term {
   Term lhs = null;
   Term value = null;
 
-  new(Term lhs, Term value) {
+  new(Term lhs, Term value) extends super(rootNamespace["ASTAssignment"]) {
     this.lhs = lhs;
     this.value = value;
   }
@@ -134,10 +139,29 @@ class gelly::AssignTerm extends gelly::Term {
   }
 }
 
+class gelly::TupleTerm extends gelly::Term {
+  Array<Term> values = null;
+
+  new(Array<Term> values) extends super(rootNamespace["ASTTuple"]) {
+    this.values = values;
+  }
+
+  String toIndentedString(Int depth) {
+    var s = new MutableString();
+    for(Term value : values) {
+      s.append(value.as<String>);
+      if(value != values[values.length-1]) {
+        s.append(", ");
+      }
+    }
+    return s.as<String>;
+  }
+}
+
 class gelly::IntTerm extends gelly::Term {
   Int value = 0;
 
-  new(Int value) {
+  new(Int value) extends super(rootNamespace["ASTInt"]) {
     this.value = value;
   }
 
@@ -159,10 +183,24 @@ class gelly::IntTerm extends gelly::Term {
   }
 }
 
+class gelly::BoolTerm extends gelly::Term {
+  Bool value = false;
+
+  new(Bool value) extends super(rootNamespace["ASTBool"]) {
+    this.value = value;
+  }
+
+  as<String> {
+    var ms = new MutableString();
+    ms.append(value);
+    return ms.as<String>;
+  }
+}
+
 class gelly::StringTerm extends gelly::Term {
   String value = null;
 
-  new(String value) {
+  new(String value) extends super(rootNamespace["ASTString"]) {
     this.value = value;
   }
 
@@ -185,7 +223,7 @@ class gelly::StringTerm extends gelly::Term {
 class gelly::IdnTerm extends gelly::Term {
   String idn = null;
 
-  new(String idn) {
+  new(String idn) extends super(rootNamespace["ASTIdentifier"]) {
     this.idn = idn;
   }
 

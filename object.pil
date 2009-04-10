@@ -13,6 +13,11 @@ class gelly::exception::NoSuchMethodException extends Exception {
   }
 }
 
+class gelly::exception::InvalidArgumentException extends Exception {
+  new(String message) extends super(message) {
+  }
+}
+
 class gelly::GLObject {
   GLClass cls = null;
   Map<String, GLMethod> methods = new Map<String, GLMethod>();
@@ -87,36 +92,37 @@ class gelly::GLMethod extends GLObject {
   Array<String> argumentNames = null;
   BlockTerm block = null;
   String selector = null;
+  Env closure = null;
 
   new(String selector, Array<String> argumentNames, BlockTerm block) extends super(rootNamespace["Method"]){
     this.argumentNames = argumentNames;
     this.block = block;
     this.selector = null;
+    this.closure = closure;
+  }
+
+  void verifyType(GLObject o, pil::reflect::Class type) {
+    if(o.class != type) {
+      throw new InvalidArgumentException("Argument: " + o.as<String> + " is not of type: " + type.qualifiedId);
+    }
   }
 
   GLObject invoke(GLObject self, Array<GLObject> args) {
-    var env = new Env(self);
+    Env env = null;
+    if(closure != null) {
+      env = closure.lightClone(self);
+    } else {
+      env = new Env(self);
+    }
     for(Int i = 0; i < argumentNames.length; i++) {
       env.variables[argumentNames[i]] = args[i];
     }
-    env.evalBlock(block);
+    GLObject rv = env.evalBlock(block);
     if(env.returnValue != null) {
       return env.returnValue;
     } else {
-      return self;
+      return rv;
     }
-  }
-}
-
-class gelly::GLString extends GLObject {
-  String value = null;
-
-  new(String value) extends super(rootNamespace["String"]) {
-    this.value = value;
-  }
-
-  as<String> {
-    return value;
   }
 }
 

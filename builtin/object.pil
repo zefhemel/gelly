@@ -11,11 +11,18 @@ GLClass gelly::builtin::object::init() {
   object.methods["defineMethods:"] = new gelly::builtin::object::DefineMethods(false);
   object.methods["subClass:withMethods:"] = new gelly::builtin::object::SubclassMethod();
 
+  object.instanceMethods["=="] = new gelly::builtin::object::EqMethod();
+  object.instanceMethods["!="] = new gelly::builtin::object::NotEqMethod();
+
   object.instanceMethods["set:to:"] = new gelly::builtin::object::SetFieldMethod();
   object.instanceMethods["get:"] = new gelly::builtin::object::GetFieldMethod();
   object.instanceMethods["describe"] = new gelly::builtin::object::DescribeMethod();
-  object.instanceMethods["print:"] = new gelly::builtin::object::PrintMethod();
   object.instanceMethods["defineMethods:"] = new gelly::builtin::object::DefineMethods(false);
+
+  object.instanceMethods["print:"] = new gelly::builtin::object::PrintMethod();
+  object.instanceMethods["if:then:"] = new gelly::builtin::object::IfThenMethod();
+  object.instanceMethods["if:then:else:"] = new gelly::builtin::object::IfThenElseMethod();
+  object.instanceMethods["while:do:"] = new gelly::builtin::object::WhileMethod();
   return object;
 }
 
@@ -104,5 +111,87 @@ class gelly::builtin::object::SubclassMethod extends GLMethod {
     }
     rootNamespace[className] = cls;
     return cls;
+  }
+}
+
+class gelly::builtin::object::EqMethod extends GLMethod {
+  new() extends super("==", new Array<String>("other"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLBool(o == args[0]);
+  }
+}
+
+class gelly::builtin::object::NotEqMethod extends GLMethod {
+  new() extends super("!=", new Array<String>("other"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    return new GLBool(!(o == args[0]));
+  }
+}
+
+class gelly::builtin::object::IfThenMethod extends GLMethod {
+  new() extends super("if:then:", new Array<String>("condition", "ifTrue"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    verifyType(args[0], typeof GLMethod);
+    verifyType(args[1], typeof GLMethod);
+    GLMethod cond = args[0].as<GLMethod>;
+    GLMethod trueBlock = args[1].as<GLMethod>;
+    GLObject value = cond.invoke(o, new Array<GLObject>());
+    if(!(value instanceof GLBool)) {
+      throw new Exception("Condition should return in bool: " + cond.as<String>);
+    }
+    if(value.as<GLBool>.value) {
+      return trueBlock.invoke(o, new Array<GLObject>());
+    }
+    return o;
+  }
+}
+
+class gelly::builtin::object::IfThenElseMethod extends GLMethod {
+  new() extends super("if:then:else:", new Array<String>("condition", "ifTrue", "ifFalse"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    verifyType(args[0], typeof GLMethod);
+    verifyType(args[1], typeof GLMethod);
+    verifyType(args[2], typeof GLMethod);
+    GLMethod cond = args[0].as<GLMethod>;
+    GLMethod trueBlock = args[1].as<GLMethod>;
+    GLMethod falseBlock = args[2].as<GLMethod>;
+    GLObject value = cond.invoke(o, new Array<GLObject>());
+    if(!(value instanceof GLBool)) {
+      throw new Exception("Condition should return in bool: " + cond.as<String>);
+    }
+    if(value.as<GLBool>.value) {
+      return trueBlock.invoke(o, new Array<GLObject>());
+    } else {
+      return falseBlock.invoke(o, new Array<GLObject>());
+    }
+  }
+}
+
+class gelly::builtin::object::WhileMethod extends GLMethod {
+  new() extends super("while:do:", new Array<String>("condition", "block"), null) {
+  }
+
+  GLObject invoke(GLObject o, Array<GLObject> args) {
+    verifyType(args[0], typeof GLMethod);
+    verifyType(args[1], typeof GLMethod);
+    GLMethod cond = args[0].as<GLMethod>;
+    GLMethod block = args[1].as<GLMethod>;
+    GLObject value = cond.invoke(o, new Array<GLObject>());
+    if(!(value instanceof GLBool)) {
+      throw new Exception("Condition should return in bool: " + cond.as<String>);
+    }
+    while(value.as<GLBool>.value) {
+      block.invoke(o, new Array<GLObject>());
+      value = cond.invoke(o, new Array<GLObject>());
+    }
+    return o;
   }
 }

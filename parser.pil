@@ -16,12 +16,11 @@ class gelly::Parser {
     new Array<String>("."),
     new Array<String>("*", "/", "%"),
     new Array<String>("+", "-"),
-    new Array<String>("<", "<=", ">", ">="),
+    new Array<String>("<", "<=", ">", ">=", "==", "!="),
     new Array<String>("!"),
     new Array<String>("&"),
     new Array<String>("|"),
-    new Array<String>("?", "$"),
-    new Array<String>(",")
+    new Array<String>("?", "$")
     );
 
   List<Char> allOps = new List<Char>('!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?');
@@ -38,7 +37,13 @@ class gelly::Parser {
     }
     var v = acceptIdn();
     if(v != null) {
-      return new IdnTerm(v);
+      if(v == "true") {
+        return new BoolTerm(true);
+      } else if(v == "false") {
+        return new BoolTerm(false);
+      } else {
+        return new IdnTerm(v);
+      }
     }
     var s = acceptString();
     if(s != null) {
@@ -65,17 +70,18 @@ class gelly::Parser {
   BlockTerm acceptBlock() {
     var oldI = i;
     acceptWhiteSpace();
-    if(accept('[')) {
+    if(accept('{') || accept('[')) {
       acceptAnyWhiteSpace();
       var stats = new List<Term>();
-      while(!accept(']')) {
+      while(!accept('}') && !accept(']')) {
         var stat = acceptStatement();
         if(stat == null) {
           printRest();
           throw new ParseException("Expected a statement, couln't parse it.");
         }
         stats.add(stat);
-        if(!acceptNewline()) {
+        acceptWhiteSpace();
+        if(!acceptNewline() && !(lookAhead("]") || lookAhead("}"))) {
           i = oldI;
           return null;
         } else {
@@ -89,10 +95,10 @@ class gelly::Parser {
 
   Term acceptDeclBlock() {
     var oldI = i;
-    if(accept('[')) {
+    if(accept('{')) {
       acceptAnyWhiteSpace();
       var decls = new List<Term>();
-      while(!accept(']')) {
+      while(!accept('}')) {
         String postfixMethodname = acceptIdnNoKeyword();
         MethodSignature sig = null;
         if(postfixMethodname != null) {
@@ -199,16 +205,6 @@ class gelly::Parser {
     }
     i = oldI;
     return t;
-    /*
-    var oldI = i;
-    var idn = acceptIdn();
-    if(idn != null && !accept(':')) {
-      return new MessageSendTerm(null, idn, new Array<Term>());
-    } else {
-      i = oldI;
-      return null;
-    }
-    */
   }
 
   Term acceptMS() {
@@ -252,9 +248,33 @@ class gelly::Parser {
     }
   }
 
+  Term acceptTuple() {
+    acceptWhiteSpace();
+    Term t = acceptMS();
+    acceptWhiteSpace();
+    if(t != null && accept(',')) {
+      var items = new List<Term>();
+      items.add(t);
+      acceptWhiteSpace();
+      while(true) {
+        t = acceptMS();
+        acceptWhiteSpace();
+        if(t == null) {
+          return new TupleTerm(items.as<Array<Term>>);
+        }
+        items.add(t);
+        if(!accept(',')) {
+          return new TupleTerm(items.as<Array<Term>>);
+        }
+        acceptWhiteSpace();
+      }
+    }
+    return t;
+  }
+
   Term acceptExp() {
     acceptWhiteSpace();
-    var t = acceptMS();
+    var t = acceptTuple();
     return t;
   }
 
@@ -262,7 +282,7 @@ class gelly::Parser {
     var oldI = i;
     var t = acceptFactor();
     acceptWhiteSpace();
-    if(accept('=')) {
+    if(accept('=') && !accept('=')) {
       acceptWhiteSpace();
       var e = acceptStatement();
       if(e == null) {
@@ -342,15 +362,12 @@ class gelly::Parser {
 
   Bool acceptNewline() {
     acceptWhiteSpace();
-    if(i == text.length || text[i] == '\n' || text[i] == '\r' || text[i] == ';') {
-      if(i < text.length) { 
-        i++;
-        acceptWhiteSpace();
-      }
-      return true;
-    } else {
-      return false;
+    var oldI = i;
+    while(i < text.length && (text[i] == '\n' || text[i] == '\r' || text[i] == ';')) {
+      i++;
+      acceptWhiteSpace();
     }
+    return i == text.length || oldI != i;
   }
 
   void printRest() {
@@ -503,13 +520,9 @@ class gelly::Parser {
     while(i < text.length && ((text[i] >= 'a' && text[i] <= 'z') || 
                               (text[i] >= 'A' && text[i] <= 'Z') ||
                               (text[i] >= '0' && text[i] <= '9') ||
-                              (text[i] == '_') || (text[i] == '-'))) {
+                              (text[i] == '_'))) {
       sym.append(text[i]);
       i++;
-    }
-    while(i > 1 && text[i-1] == '-') {
-      i--;
-      sym.remove(sym.length-1);
     }
     return sym.as<String>;
   }
