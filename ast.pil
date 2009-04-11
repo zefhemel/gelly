@@ -139,10 +139,10 @@ class gelly::AssignTerm extends gelly::Term {
   }
 }
 
-class gelly::TupleTerm extends gelly::Term {
+class gelly::ListTerm extends gelly::Term {
   Array<Term> values = null;
 
-  new(Array<Term> values) extends super(rootNamespace["ASTTuple"]) {
+  new(Array<Term> values) extends super(rootNamespace["ASTList"]) {
     this.values = values;
   }
 

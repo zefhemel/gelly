@@ -12,8 +12,7 @@ public class NewNativeClassMethod extends GLMethod {
 
 	@SuppressWarnings("unchecked")
 	public gelly.GLObject invoke(gelly.GLObject o, gelly.GLObject[] args) {
-		String fullyQualifiedClassName = ((gelly.GLString) args[((int) 0)])
-				.getValue();
+		String fullyQualifiedClassName = ((gelly.GLString) args[0]).getValue();
 		GLNativeClass cls;
 		try {
 			Class<Object> wrappedClass = (Class<Object>) Class.forName(fullyQualifiedClassName);
@@ -33,20 +32,5 @@ public class NewNativeClassMethod extends GLMethod {
 		} catch (ClassNotFoundException e) {
 			return null;
 		}
-	}
-
-	public pil.reflect.Class getClassInfo() {
-		return null;
-		/*
-		if (!pil.reflect.ClassCache.classCache
-				.containsKey("gelly::builtin::native::NewNativeClassMethod")) {
-			pil.reflect.ClassCache.classCache
-					.put(
-							"gelly::builtin::native::NewNativeClassMethod",
-							new gelly.builtin.native_.reflect.NewNativeClassdMethodClassInfo());
-		} else {
-		}
-		return pil.reflect.ClassCache.classCache
-				.get("gelly::builtin::native::NewNativeClassMethod");*/
 	}
 }

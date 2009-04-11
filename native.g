@@ -1,7 +1,5 @@
 StringBuilder = Object importNativeClass: "java.lang.StringBuilder"
-print: "here"
-s = StringBuilder new
-print: "here"
+s = StringBuilder new: "initial value"
 s append: "Bla"
 s append: "Bla"
 s append: "Bla"

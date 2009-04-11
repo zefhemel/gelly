@@ -248,7 +248,7 @@ class gelly::Parser {
     }
   }
 
-  Term acceptTuple() {
+  Term acceptList() {
     acceptWhiteSpace();
     Term t = acceptMS();
     acceptWhiteSpace();
@@ -260,11 +260,11 @@ class gelly::Parser {
         t = acceptMS();
         acceptWhiteSpace();
         if(t == null) {
-          return new TupleTerm(items.as<Array<Term>>);
+          return new ListTerm(items.as<Array<Term>>);
         }
         items.add(t);
         if(!accept(',')) {
-          return new TupleTerm(items.as<Array<Term>>);
+          return new ListTerm(items.as<Array<Term>>);
         }
         acceptWhiteSpace();
       }
@@ -274,7 +274,7 @@ class gelly::Parser {
 
   Term acceptExp() {
     acceptWhiteSpace();
-    var t = acceptTuple();
+    var t = acceptList();
     return t;
   }
 

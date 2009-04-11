@@ -4,6 +4,7 @@ import gelly.GLMethod;
 import gelly.GLNativeClass;
 import gelly.GLNativeObject;
 import gelly.GLObject;
+import gelly.NativeUtils;
 
 public class NewNativeObjectMethod extends GLMethod {
 	public NewNativeObjectMethod(String selector) {
@@ -21,7 +22,19 @@ public class NewNativeObjectMethod extends GLMethod {
 				return null;
 			}
 		} else { // not implemented yet
-			return null;
+			GLNativeClass cls = (GLNativeClass)self;
+			Object[] javaArgs = new Object[args.length];
+		    Class[] argTypes = new Class[args.length];
+		    for(int i = 0; i < args.length; i++) {
+		        javaArgs[i] = NativeUtils.gellyToJava(args[i]);
+		        argTypes[i] = javaArgs[i].getClass();
+		    }
+			try {
+				Object o = cls.getWrappedClass().getConstructor(argTypes).newInstance(javaArgs);
+				return new GLNativeObject(cls, o);
+			} catch (Exception e) {
+				return null;
+			}
 		}
 	}
 }

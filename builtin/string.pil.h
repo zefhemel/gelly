@@ -23,7 +23,7 @@ external pil::reflect::Class gelly::reflect::typeOfIdnTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfStringTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfBoolTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfIntTerm ( ) ;
-external pil::reflect::Class gelly::reflect::typeOfTupleTerm ( ) ;
+external pil::reflect::Class gelly::reflect::typeOfListTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfAssignTerm ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfMethodSignature ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfMethodDefTerm ( ) ;
@@ -203,7 +203,7 @@ external class gelly::AssignTerm extends gelly::Term {
     new ( gelly::Term lhs , gelly::Term value ) ;
     pil::String toIndentedString ( pil::Int depth ) ;
 }
-external class gelly::TupleTerm extends gelly::Term {
+external class gelly::ListTerm extends gelly::Term {
     pil::Array < gelly::Term > values ;
     new ( pil::Array < gelly::Term > values ) ;
     pil::String toIndentedString ( pil::Int depth ) ;
