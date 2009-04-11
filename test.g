@@ -66,3 +66,5 @@ Int defineInstanceMethods: {
   }
 }
 
+print: "Factorial of 25:"
+print: 25 fact

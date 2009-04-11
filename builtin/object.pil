@@ -10,6 +10,7 @@ GLClass gelly::builtin::object::init() {
   object.methods["defineInstanceMethods:"] = new gelly::builtin::object::DefineMethods(true);
   object.methods["defineMethods:"] = new gelly::builtin::object::DefineMethods(false);
   object.methods["subClass:withMethods:"] = new gelly::builtin::object::SubclassMethod();
+  object.methods["importNativeClass:"] = new gelly::builtin::native::NewNativeClassMethod();
 
   object.instanceMethods["=="] = new gelly::builtin::object::EqMethod();
   object.instanceMethods["!="] = new gelly::builtin::object::NotEqMethod();

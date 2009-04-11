@@ -4,6 +4,7 @@ import "builtin/object.pil"
 import "builtin/string.pil"
 import "builtin/int.pil"
 import "builtin/bool.pil"
+import "builtin/native.pil"
 
 import gelly
 import gelly::exception

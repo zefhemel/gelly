@@ -97,7 +97,7 @@ class gelly::GLMethod extends GLObject {
   new(String selector, Array<String> argumentNames, BlockTerm block) extends super(rootNamespace["Method"]){
     this.argumentNames = argumentNames;
     this.block = block;
-    this.selector = null;
+    this.selector = selector;
     this.closure = closure;
   }
 

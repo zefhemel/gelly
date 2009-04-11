@@ -49,6 +49,7 @@ external pil::reflect::Class gelly::builtin::int::reflect::typeOfSubstractMethod
 external pil::reflect::Class gelly::builtin::int::reflect::typeOfAddMethod ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfGLInt ( ) ;
 external pil::reflect::Class gelly::reflect::typeOfGLBool ( ) ;
+external pil::reflect::Class gelly::builtin::native::reflect::typeOfNewNativeClassMethod ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfField ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfMethod ( ) ;
 external pil::reflect::Class pil::reflect::reflect::typeOfParameterClass ( ) ;
@@ -78,6 +79,9 @@ external pil::reflect::Class pil::reflect::typeOfNumeric ( ) ;
 external pil::reflect::Class pil::reflect::typeOfBool ( ) ;
 external pil::reflect::Class reflect::typeOfNone ( ) ;
 external pil::reflect::Class pil::reflect::typeOfObject ( ) ;
+external class gelly::builtin::native::NewNativeClassMethod extends gelly::GLMethod {
+    new ( ) ;
+}
 external class gelly::GLBool extends gelly::GLObject {
     pil::Bool value ;
     new ( pil::Bool value ) ;

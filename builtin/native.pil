@@ -1,0 +1,4 @@
+
+external class gelly::builtin::native::NewNativeClassMethod extends gelly::GLMethod {
+  new();
+}
