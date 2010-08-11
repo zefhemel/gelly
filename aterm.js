@@ -34,10 +34,11 @@ var aterm = {};
       return s + "}";
     }
 
-    function ApplTerm(cons, children, annos) {
+    function ApplTerm(cons, children, annos, pos) {
       this.cons = cons;
       this.children = children || [];
       this.annos = annos || [];
+      this.pos = pos;
     }
 
     ApplTerm.prototype = new Term(ATERM_APPL);
@@ -98,9 +99,10 @@ var aterm = {};
       return new ApplTerm(this.cons, children);
     };
 
-    function ListTerm (children, annos) {
+    function ListTerm (children, annos, pos) {
       this.children = children;
       this.annos = annos || [];
+      this.pos = pos;
     }
 
     ListTerm.prototype = new Term(ATERM_LIST);
@@ -158,9 +160,10 @@ var aterm = {};
       return new ListTerm(children);
     };
 
-    function IntTerm (n, annos) {
+    function IntTerm (n, annos, pos) {
       this.n = n;
       this.annos = annos || [];
+      this.pos = pos;
     }
 
     IntTerm.prototype = new Term(ATERM_INT);
@@ -181,9 +184,10 @@ var aterm = {};
       return this;
     };
 
-    function StringTerm (s, annos) {
+    function StringTerm (s, annos, pos) {
       this.s = s;
       this.annos = annos || [];
+      this.pos = pos;
     }
 
     StringTerm.prototype = new Term(ATERM_STRING);
@@ -204,8 +208,9 @@ var aterm = {};
       return this;
     };
 
-    function PlaceholderTerm(id) {
+    function PlaceholderTerm(id, pos) {
       this.id = id;
+      this.pos = pos;
     }
 
     PlaceholderTerm.prototype = new Term(ATERM_PLACEHOLDER);
@@ -245,6 +250,7 @@ var aterm = {};
         }
       }
       function parseInt () {
+        var pos = idx;
         if (s[idx] >= '0' && s[idx] <= '9') {
           var ns = s[idx];
           idx++;
@@ -253,12 +259,13 @@ var aterm = {};
             idx++;
           }
           skipWhitespace();
-          return new IntTerm(+ns, parseAnnos());
+          return new IntTerm(+ns, parseAnnos(), pos);
         } else {
           return null;
         }
       }
       function parseString () {
+        var pos = idx;
         if (accept('"')) {
           var ns = "";
           idx++;
@@ -286,12 +293,13 @@ var aterm = {};
           }
           idx++;
           skipWhitespace();
-          return new StringTerm(ns2, parseAnnos());
+          return new StringTerm(ns2, parseAnnos(), pos);
         } else {
           return null;
         }
       }
       function parsePlaceholder () {
+        var pos = idx;
         if (accept('<')) {
           var ns = "";
           idx++;
@@ -301,12 +309,13 @@ var aterm = {};
           }
           idx++;
           skipWhitespace();
-          return new PlaceholderTerm(ns);
+          return new PlaceholderTerm(ns, pos);
         } else {
           return null;
         }
       }
       function parseList () {
+        var pos = idx;
         if (accept('[')) {
           var items = [];
           idx++;
@@ -320,7 +329,7 @@ var aterm = {};
           }
           idx++;
           skipWhitespace();
-          return new ListTerm(items, parseAnnos());
+          return new ListTerm(items, parseAnnos(), pos);
         } else {
           return null;
         }
@@ -345,42 +354,45 @@ var aterm = {};
         }
       }
       function parseAppl () {
+        var pos = idx;
         // assumption: it's an appl
         var ns = "";
         while (!accept('(')) {
-            ns += s[idx];
-            idx++;
-          }
-          idx++; // skip (
-          var items = [];
-          while (!accept(')')) {
-            items.push(parseExp());
-            if (accept(',')) {
-              idx++; // skip comma
-              skipWhitespace();
-            }
-          }
+          ns += s[idx];
           idx++;
-          skipWhitespace();
-          return new ApplTerm(ns, items, parseAnnos());
         }
-        function parseExp () {
-          var r = parseInt();
-          if (r)
-            return r;
-          r = parseString();
-          if (r)
-            return r;
-          r = parseList();
-          if (r)
-            return r;
-          r = parsePlaceholder();
-          if (r)
-            return r;
-          return parseAppl();
+        idx++; // skip (
+        var items = [];
+        while (!accept(')')) {
+          items.push(parseExp());
+          if (accept(',')) {
+            idx++; // skip comma
+            skipWhitespace();
+          }
         }
-        return parseExp();
+        idx++;
+        skipWhitespace();
+        return new ApplTerm(ns, items, parseAnnos(), pos);
       }
 
-      aterm.parse = parse;
-    }());
+      function parseExp () {
+        var r = parseInt();
+        if (r)
+          return r;
+        r = parseString();
+        if (r)
+          return r;
+        r = parseList();
+        if (r)
+          return r;
+        r = parsePlaceholder();
+        if (r)
+          return r;
+        return parseAppl();
+      }
+
+      return parseExp();
+    }
+
+    aterm.parse = parse;
+  }());

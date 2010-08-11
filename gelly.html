@@ -5,18 +5,49 @@
   <script src="aterm.js" type="application/javascript"></script>
   <script src="aterm.traversal.js" type="application/javascript"></script>
   <script src="parser.js" type="application/javascript"></script>
+  <script src="compiler.js" type="application/javascript"></script>
 </head>
 <body>
-  <textarea id="code" rows="20" cols="50" style="font-family: 'Courier';" onkeyup="parseIt()">var x = 8;</textarea>
-  <button onclick="parseIt()">Parse</button>
-  <textarea id="parsed" rows="20" cols="50" style="font-family: 'Courier';"></textarea>
+  <p><textarea id="code" rows="20" cols="60" style="font-family: 'Courier';" onkeyup="parseIt()">var x = 8 * 8
+alert(x)</textarea>
+  <textarea id="parsed" rows="20" cols="60" style="font-family: 'Courier';"></textarea></p>
+  <p><textarea id="rules" rows="20" cols="60" style="font-family: 'Courier';" onkeyup="parseIt()">my-rule : Keyword("var", Op("=", Sym(<var>), <exp>)) -> VarDeclInit(<var>, <exp>)
+
+handle-calls : Op("_", Sym(<fn>), ParList(<args>)) -> Call(<fn>, <args>)</textarea>
+  <textarea id="transformed" rows="20" cols="60" style="font-family: 'Courier';" onkeyup="parseIt()"></textarea>></p>
+  <div id="error" style="color: red;"></div>
+  <p>Keywords: <input type="text" id="keywords" value="application screen var" style="width: 100%;"/></p>
   <script>
     function parseIt() {
       var code = document.getElementById("code").value;
-      var ast = parse(code, ['function', 'var', 'return']);
-      var el = document.getElementById("parsed");
-      el.value = ast ? ast.toPrettyString('') : "parse error";
+      var rulesCode = document.getElementById("rules").value;
+      var keywords = document.getElementById("keywords").value.split(/\s+/);
+      var errEl = document.getElementById("error");
+      errEl.innerText = "";
+      try {
+        var parsed = gelly.parse(code, {keywords: keywords});
+        var el = document.getElementById("parsed");
+        var parsedRules = gelly.parse(rulesCode);
+        //console.log(rules.toPrettyString());
+        el.value = parsed ? parsed.toPrettyString('') : "parse error";
+        //eval(rule);
+      } catch(ex) {
+        errEl.innerText = ex.message;
+      }
+      var rules = {};
+      var rule = compile(parsedRules);
+      console.log(rule);
+      eval(rule);
+      var transformed = parsed;
+      for(var rule in rules) {
+        if(rules.hasOwnProperty(rule)) {
+          transformed = aterm.traversal.alltd(rules[rule], transformed);
+        }
+      }
+      var transformedEl = document.getElementById("transformed");
+      transformedEl.value = transformed.toPrettyString("");
     }
+    parseIt();
   </script>
 </body>
 </html>

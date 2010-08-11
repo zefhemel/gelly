@@ -1,23 +1,49 @@
-/*
-map fn [] = [];
-map fn [a | k] = [fn a | map fn k];
-*/ 
+var gelly = {};
 
-function parse(text, keywords) {
-  var emptyTerm = new aterm.ApplTerm("Empty");
+gelly.parse = function(text, config) {
   var emptyList = new aterm.ListTerm([]);
-  keywords = keywords || [];
+  config = config || {};
 
-  function opTerm(op, left, right) {
-    return new aterm.ApplTerm("Op", [new aterm.StringTerm(op), left ? left : emptyTerm, right ? right : emptyTerm]);
+  var keywords = config.keywords || [];
+
+  function opTerm(op, left, right, pos) {
+    return new aterm.ApplTerm("Op", [new aterm.StringTerm(op), left, right], pos);
   }
 
-  function symbolTerm(sym) {
-    return new aterm.ApplTerm("Sym", [new aterm.StringTerm(sym)]);
+  function prefixOpTerm(op, t, pos) {
+    return new aterm.ApplTerm("PrefixOp", [new aterm.StringTerm(op), t], pos);
   }
 
-  function groupTerm(delim, items) {
-    return new aterm.ApplTerm("Group", [new aterm.StringTerm(delim), items]);
+  function postfixOpTerm(op, t, pos) {
+    return new aterm.ApplTerm("PostfixOp", [new aterm.StringTerm(op), t], pos);
+  }
+
+  function symbolTerm(sym, pos) {
+    return new aterm.ApplTerm("Sym", [new aterm.StringTerm(sym)], pos);
+  }
+
+  function groupTerm(delim, items, pos) {
+    return new aterm.ApplTerm("Group", [new aterm.StringTerm(delim), items], pos);
+  }
+
+  function intTerm(n, pos) {
+    return new aterm.ApplTerm("Int", [new aterm.IntTerm(n)], pos);
+  }
+
+  function singleQuoteStringTerm(s, pos) {
+    return new aterm.ApplTerm("SQString", [new aterm.StringTerm(s)], pos);
+  }
+
+  function doubleQuoteStringTerm(s, pos) {
+    return new aterm.ApplTerm("DQString", [new aterm.StringTerm(s)], pos);
+  }
+
+  function applTerm(cons, children, pos) {
+    return new aterm.ApplTerm(cons, children, pos);
+  }
+
+  function listTerm(items, pos) {
+    return new aterm.ListTerm(items, pos);
   }
 
   function arrayContains(ar, item) {
@@ -29,14 +55,6 @@ function parse(text, keywords) {
     return false;
   }
 
-  function valueOrEmpty(t) {
-    if(t === null) {
-      return emptyTerm;
-    } else {
-      return t;
-    }
-  }
-
   function valueOrEmptyList(t) {
     if(t === null) {
       return emptyList;
@@ -46,7 +64,7 @@ function parse(text, keywords) {
   }
 
   var i = 0;
-  var keywordLevel = 9;
+  var keywordLevel = 8;
   var followLevel = 0;
 
   var operators = [
@@ -58,18 +76,17 @@ function parse(text, keywords) {
     ["&"],
     ["|"],
     ["?", ":", "$"],
-    [","],
     ["keyword"]
   ];
 
-  var noWhitespaceOps = [";", ",", ".", "_"];
-  var allOps = ['!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?'];
+  var noWhitespaceOps = [";", ",", ".", "_", "=", ":", "|"]; // first characters only
+  var allOps = ['!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?', ':'];
   var prefixOps = ["+", "-", "*", "<", ">", "?", "!", ":", "`", "$"];
 
   function acceptFactor() { 
-    var int = acceptInt();
-    if(int !== -1) {
-      return new aterm.IntTerm(int);
+    var intT = acceptInt();
+    if(intT !== null) {
+      return intT;
     }
     var idn = acceptIdn();
     if(idn !== null && !arrayContains(keywords, idn)) {
@@ -77,9 +94,9 @@ function parse(text, keywords) {
     } else if(idn !== null && arrayContains(keywords, idn)) {
       i = i - idn.length;
     }
-    var s = acceptString();
-    if(s !== null) {
-      return new aterm.StringTerm(s);
+    var st = acceptString();
+    if(st !== null) {
+      return st;
     }
     var pe = acceptPrefixExp();
     if(pe != null) {
@@ -87,24 +104,33 @@ function parse(text, keywords) {
     }
     if(accept('(')) {
       acceptWhiteSpace();
-      var exp = acceptExp();
+      var exps = acceptExps();
+      if(!exps) {
+        throw { message: "Expected expression list", pos: i };
+      }
       acceptWhiteSpace();
       expect(')');
-      return groupTerm('(', valueOrEmptyList(exp));
+      return applTerm('ParList', [exps]);
     }
     if(accept('[')) {
       acceptWhiteSpace();
-      var exp = acceptExp();
+      var exps = acceptExps();
+      if(!exps) {
+        throw { message: "Expected expression list", pos: i };
+      }
       acceptWhiteSpace();
       expect(']');
-      return groupTerm('[', valueOrEmptyList(exp));
+      return applTerm('BracketList', [exps]);
     }
     if(accept('{')) {
       acceptWhiteSpace();
-      var exp = acceptStats();
+      var stats = acceptStats();
+      if(!stats) {
+        throw { message: "Expected statement list", pos: i };
+      }
       acceptWhiteSpace();
       expect('}');
-      return groupTerm('{', valueOrEmptyList(exp));
+      return applTerm('Block', [stats]);
     }
     return null;
   }
@@ -116,7 +142,7 @@ function parse(text, keywords) {
     }
     var t = acceptFactor(); //acceptGeneric(0);
     if(t !== null) {
-      return opTerm(op, null, t);
+      return prefixOpTerm(op, t);
     } else {
       return null;
     }
@@ -133,14 +159,20 @@ function parse(text, keywords) {
     acceptWhiteSpace();
     var t = acceptExp(); //acceptGeneric(keywordLevel - 1);
     if(t !== null) {
-      return new aterm.ApplTerm(kw[0].toUpperCase()+kw.substring(1), [t]);
+      return applTerm("Keyword", [new aterm.StringTerm(kw), t]);
     } else {
       i = oldI;
       return null;
     }
   }
 
+  function isNoWhitespaceOp(op) {
+    if(!op) return false;
+    return arrayContains(noWhitespaceOps, op[0]);
+  }
+
   function acceptGeneric(level) {
+    var pos = i;
     var f = null;
     if(level === 0) {
       f = acceptFactor();
@@ -156,15 +188,15 @@ function parse(text, keywords) {
     var oldI = i;
     var didAcceptWhitespace = acceptWhiteSpace();
     var op = acceptOps(operators[level]);
-    if(!didAcceptWhitespace && op !== null && !arrayContains(noWhitespaceOps, op)) {
-      t = opTerm(op, t, null);
+    if(!didAcceptWhitespace && op !== null && !isNoWhitespaceOp(op)) {
+      t = postfixOpTerm(op, t, pos);
       acceptWhiteSpace();
       oldI = i;
       op = acceptOps(operators[level]);
     }
     while(op !== null) {
-      if(!acceptWhiteSpace() && !arrayContains(noWhitespaceOps, op)) {
-        t = opTerm(op, t, null);
+      if(!acceptWhiteSpace() && !isNoWhitespaceOp(op)) {
+        t = postfixOpTerm(op, t, pos);
         acceptWhiteSpace();
         op = acceptOps(operators[level]);
       }
@@ -178,9 +210,12 @@ function parse(text, keywords) {
         i = oldI;
         return t;
       }
-      t = opTerm(op, t, valueOrEmpty(t2));
+      if(!t2) {
+        throw { message: "Expected operand", pos: i };
+      }
+      t = opTerm(op, t, t2, pos);
       oldI = i;
-      if(!acceptWhiteSpace() && !arrayContains(noWhitespaceOps, op)) {
+      if(!acceptWhiteSpace() && !isNoWhitespaceOp(op)) {
         i = oldI;
         return t;
       }
@@ -191,7 +226,8 @@ function parse(text, keywords) {
   }
 
   function acceptStats() {
-    var stats = []
+    var pos = i;
+    var stats = [];
     var t = null;
     acceptSemi();
     do {
@@ -200,7 +236,27 @@ function parse(text, keywords) {
         stats.push(t);
       }
     } while(t && acceptSemi());
-    return new aterm.ListTerm(stats);
+    return listTerm(stats, pos);
+  }
+
+  // comma-separated expressions
+  function acceptExps() {
+    var pos = i;
+    var exps = []
+    var t = null;
+    var stop = false;
+    do {
+      t = acceptExp();
+      if(t) {
+        exps.push(t);
+      }
+      if(accept(',')) {
+        acceptAnyWhiteSpace();
+      } else {
+        stop = true;
+      }
+    } while(t && !stop);
+    return listTerm(exps, pos);
   }
 
   function acceptExp() {
@@ -229,8 +285,30 @@ function parse(text, keywords) {
     return oldI !== i;
   }
 
+  function acceptAnyWhiteSpace() {
+    var oldI = i;
+    while(i < text.length && (text[i] == ' ' || text[i] == '\n' || text[i] == '\r' || text[i] == '\t' || lookAhead("//") || lookAhead("/*"))) { 
+      if(lookAhead("//")) {
+        while(i < text.length && text[i] != '\n' && text[i] != '\r') {
+          i++;
+        }
+      } else if(lookAhead("/*")) {
+        while(i < text.length && !lookAhead("*/")) {
+          i++;
+        }
+        if(lookAhead("*/")) {
+          i = i + 2;
+        }
+      } else {
+        i++;
+      }
+    }
+    return oldI !== i;
+  }
+
   function acceptSemi() {
     var oldI = i;
+    acceptWhiteSpace();
     if(accept(';') || accept("\n") || accept("\r")) {
       while(accept(';') || accept("\n") || accept("\r"));
       acceptWhiteSpace();
@@ -303,8 +381,9 @@ function parse(text, keywords) {
 
 
   function acceptInt() {
+    var pos = i;
     if(i === text.length) {
-      return -1;
+      return null;
     }
     var s = "";
     if(text[i] >= '0' && text[i] <= '9') {
@@ -312,13 +391,14 @@ function parse(text, keywords) {
         s += text[i];
         i++;
       }
-      return parseInt(s, 10);
+      return intTerm(parseInt(s, 10), pos);
     } else {
-      return -1;
+      return null;
     }
   }
 
   function acceptString() {
+    var pos = i;
     if(i === text.length) {
       return null;
     }
@@ -332,7 +412,17 @@ function parse(text, keywords) {
         i++;
       }
       i++;
-      return s;
+      return doubleQuoteStringTerm(s, pos);
+    } else if(text[i] == "'") {
+      i++;
+      while(i < text.length && text[i] != "'" && text[i-1] != '\\') {
+        if(!(text[i] == '\\' && i < (text.length + 1) && text[i+1] == "'")) {
+          s += text[i];
+        }
+        i++;
+      }
+      i++;
+      return singleQuoteStringTerm(s, pos);
     } else {
       return null;
     }
@@ -354,14 +444,14 @@ function parse(text, keywords) {
     if(i === text.length) {
       console.error("Rest of the buffer: ");
       printRest();
-      throw "Expected: " + c;
+      throw { message: "Expected: " + c, pos: i };
     }
     if(text[i] == c) {
       i++;
     } else {
       console.error("Rest of the buffer: ");
       printRest();
-      throw "Expected: " + c;
+      throw { message: "Expected: " + c, pos: i };
     }
   }
 
@@ -395,4 +485,34 @@ function parse(text, keywords) {
   }
 
   return acceptStats();
-}
+};
+
+gelly.gellyAtermToAterm = function(t) {
+  var pattern = aterm.parse('Op("_",Sym(<cons>),ParList(<args>))');
+  var matches = {};
+  if(pattern.match(t, matches)) {
+    return new aterm.ApplTerm(matches.cons.s, matches.args.children.map(gelly.gellyAtermToAterm));
+  } 
+
+  var pattern = aterm.parse('Int(<n>)');
+  if(pattern.match(t, matches)) {
+    return new aterm.IntTerm(matches.n.n);
+  }
+
+  var pattern = aterm.parse('DQString(<s>)');
+  if(pattern.match(t, matches)) {
+    return new aterm.StringTerm(matches.s.s);
+  }
+
+  var pattern = aterm.parse('BracketList(<l>)');
+  if(pattern.match(t, matches)) {
+    return new aterm.ListTerm(matches.l.children.map(gelly.gellyAtermToAterm));
+  }
+
+  var pattern = aterm.parse('PostfixOp(">",PrefixOp("<",Sym(<mv>)))');
+  if(pattern.match(t, matches)) {
+    return new aterm.PlaceholderTerm(matches.mv.s);
+  }
+
+  return "Fail";
+};
