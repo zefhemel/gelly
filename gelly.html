@@ -3,16 +3,17 @@
 <html>
 <head>
   <script src="aterm.js" type="application/javascript"></script>
+  <script src="aterm.traversal.js" type="application/javascript"></script>
   <script src="parser.js" type="application/javascript"></script>
 </head>
 <body>
-  <textarea id="code" rows="10" cols="50" style="font-family: 'Courier';" onkeyup="parseIt()">var x = 8;</textarea>
+  <textarea id="code" rows="20" cols="50" style="font-family: 'Courier';" onkeyup="parseIt()">var x = 8;</textarea>
   <button onclick="parseIt()">Parse</button>
-  <textarea id="parsed" rows="10" cols="50" style="font-family: 'Courier';"></textarea>
+  <textarea id="parsed" rows="20" cols="50" style="font-family: 'Courier';"></textarea>
   <script>
     function parseIt() {
       var code = document.getElementById("code").value;
-      var ast = parse(code);
+      var ast = parse(code, ['function', 'var', 'return']);
       var el = document.getElementById("parsed");
       el.value = ast ? ast.toPrettyString('') : "parse error";
     }

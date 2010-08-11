@@ -3,9 +3,10 @@ map fn [] = [];
 map fn [a | k] = [fn a | map fn k];
 */ 
 
-function parse(text) {
+function parse(text, keywords) {
   var emptyTerm = new aterm.ApplTerm("Empty");
   var emptyList = new aterm.ListTerm([]);
+  keywords = keywords || [];
 
   function opTerm(op, left, right) {
     return new aterm.ApplTerm("Op", [new aterm.StringTerm(op), left ? left : emptyTerm, right ? right : emptyTerm]);
@@ -44,9 +45,9 @@ function parse(text) {
     }
   }
 
-  i = 0;
-  keywordLevel = 9;
-  followLevel = 0;
+  var i = 0;
+  var keywordLevel = 9;
+  var followLevel = 0;
 
   var operators = [
     [".", "_"],
@@ -58,43 +59,12 @@ function parse(text) {
     ["|"],
     ["?", ":", "$"],
     [","],
-    ["keyword"],
-    [";"]
+    ["keyword"]
   ];
 
   var noWhitespaceOps = [";", ",", ".", "_"];
   var allOps = ['!', '@', '#', '%', '^', '&', '*', '-', '+', '=', '|', '/', '\\', '<', '>', '.', '?'];
   var prefixOps = ["+", "-", "*", "<", ">", "?", "!", ":", "`", "$"];
-
-  function followFactor(t) {
-    var oldI = i;
-    if(!acceptWhiteSpace()) { // Postfix
-      var op = acceptOps(prefixOps);
-      if(op !== null) {
-        t = opTerm(op, t, null);
-      }
-      acceptWhiteSpace();
-      oldI = i;
-    }
-    //var exp = acceptExp();
-    var exp = acceptGeneric(followLevel);
-    if(exp === null) {
-      i = oldI;
-      return t;
-    }
-    while(exp !== null) {
-      oldI = i;
-      acceptWhiteSpace();
-      t = opTerm("_", t, exp);
-      //exp = acceptExp();
-      exp = acceptGeneric(followLevel);
-      if(exp === null) {
-        i = oldI;
-        return t;
-      }
-    }
-    return t;
-  }
 
   function acceptFactor() { 
     var int = acceptInt();
@@ -102,9 +72,9 @@ function parse(text) {
       return new aterm.IntTerm(int);
     }
     var idn = acceptIdn();
-    if(idn !== null && !lookAhead(":")) {
+    if(idn !== null && !arrayContains(keywords, idn)) {
       return symbolTerm(idn);
-    } else if(idn !== null && lookAhead(":")) {
+    } else if(idn !== null && arrayContains(keywords, idn)) {
       i = i - idn.length;
     }
     var s = acceptString();
@@ -131,7 +101,7 @@ function parse(text) {
     }
     if(accept('{')) {
       acceptWhiteSpace();
-      var exp = acceptExp();
+      var exp = acceptStats();
       acceptWhiteSpace();
       expect('}');
       return groupTerm('{', valueOrEmptyList(exp));
@@ -161,10 +131,9 @@ function parse(text) {
       return acceptGeneric(keywordLevel - 1);
     } 
     acceptWhiteSpace();
-    var t = acceptGeneric(keywordLevel - 1);
+    var t = acceptExp(); //acceptGeneric(keywordLevel - 1);
     if(t !== null) {
-      //return followFactor(new ConsTerm(1, kw, new Array<Term>(t)));
-      return opTerm(kw, null, t);
+      return new aterm.ApplTerm(kw[0].toUpperCase()+kw.substring(1), [t]);
     } else {
       i = oldI;
       return null;
@@ -201,7 +170,7 @@ function parse(text) {
       }
       var t2 = null;
       if(level === 0) {
-        t2 = acceptFactor(); // One level lower to ennforce left-recursive parsing
+        t2 = acceptFactor(); // One level lower to enforce left-recursive parsing
       } else {
         t2 = acceptGeneric(level);
       }
@@ -219,7 +188,20 @@ function parse(text) {
     }
     i = oldI;
     return t;
-  };
+  }
+
+  function acceptStats() {
+    var stats = []
+    var t = null;
+    acceptSemi();
+    do {
+      t = acceptGeneric(operators.length-1);
+      if(t) {
+        stats.push(t);
+      }
+    } while(t && acceptSemi());
+    return new aterm.ListTerm(stats);
+  }
 
   function acceptExp() {
     acceptWhiteSpace();
@@ -228,7 +210,7 @@ function parse(text) {
 
   function acceptWhiteSpace() {
     var oldI = i;
-    while(i < text.length && (text[i] == ' ' || text[i] == '\t' || text[i] == '\n' || text[i] == '\r' || lookAhead("//") || lookAhead("/*"))) { 
+    while(i < text.length && (text[i] == ' ' || text[i] == '\t' || lookAhead("//") || lookAhead("/*"))) { 
       if(lookAhead("//")) {
         while(i < text.length && text[i] != '\n' && text[i] != '\r') {
           i++;
@@ -245,6 +227,18 @@ function parse(text) {
       }
     }
     return oldI !== i;
+  }
+
+  function acceptSemi() {
+    var oldI = i;
+    if(accept(';') || accept("\n") || accept("\r")) {
+      while(accept(';') || accept("\n") || accept("\r"));
+      acceptWhiteSpace();
+      return true;
+    } else {
+      i = oldI;
+      return false;
+    }
   }
 
   function printRest() {
@@ -299,8 +293,8 @@ function parse(text) {
     if(idn === null) {
       return null;
     } 
-    if(accept(':')) {
-      return idn + ":";
+    if(arrayContains(keywords, idn)) {
+      return idn;
     } else {
       i = oldI;
       return null;
@@ -400,5 +394,5 @@ function parse(text) {
     return sym;
   }
 
-  return acceptExp();
+  return acceptStats();
 }
