@@ -1,13 +1,11 @@
 
 function compile(stats) {
   var codes = [];
-  var ruleSyntax = aterm.parse('Op(":",Sym(<rn>),Op("->", <lhs>, <rhs>))');
+  var ruleSyntax = aterm.parse('Op(":",Id(<rn>),Op("->",<lhs>,<rhs>))');
 
   function cleanRuleName(name) {
     return name.replace(/\-/g, '_');
   }
-
-  console.log(stats);
 
   stats.children.forEach(function(stat) {
       var matches = {};

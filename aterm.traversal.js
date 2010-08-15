@@ -151,6 +151,10 @@ if (!Function.prototype.curry) {
       return seq(all.curry(bottomup.curry(fn)), fn, t);
     }
 
+    function innermost(fn, t) {
+      return bottomup(attempt.curry(seq.curry(fn, innermost.curry(fn))), t);
+    }
+
     aterm.traversal.all = all;
     aterm.traversal.one = one;
     aterm.traversal.seq = seq;
@@ -160,4 +164,5 @@ if (!Function.prototype.curry) {
     aterm.traversal.alltd = alltd;
     aterm.traversal.topdown = topdown;
     aterm.traversal.bottomup = bottomup;
+    aterm.traversal.innermost = innermost;
 }());

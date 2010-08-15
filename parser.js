@@ -18,8 +18,8 @@ gelly.parse = function(text, config) {
     return new aterm.ApplTerm("PostfixOp", [new aterm.StringTerm(op), t], pos);
   }
 
-  function symbolTerm(sym, pos) {
-    return new aterm.ApplTerm("Sym", [new aterm.StringTerm(sym)], pos);
+  function identifierTerm(sym, pos) {
+    return new aterm.ApplTerm("Id", [new aterm.StringTerm(sym)], pos);
   }
 
   function groupTerm(delim, items, pos) {
@@ -38,6 +38,14 @@ gelly.parse = function(text, config) {
     return new aterm.ApplTerm("DQString", [new aterm.StringTerm(s)], pos);
   }
 
+  function interpolTerm(t, pos) {
+    return new aterm.ApplTerm("InterpolTerm", [t], pos);
+  }
+
+  function interpolatedStringTerm(ts, pos) {
+    return new aterm.ApplTerm("IString", [new aterm.ListTerm(ts)], pos);
+  }
+
   function applTerm(cons, children, pos) {
     return new aterm.ApplTerm(cons, children, pos);
   }
@@ -53,6 +61,11 @@ gelly.parse = function(text, config) {
       }
     }
     return false;
+  }
+
+  // Implicitly assumes the `idn` argument has just been parsed
+  function isKeyword(idn) {
+    return arrayContains(keywords, idn) || lookAhead(':');
   }
 
   function valueOrEmptyList(t) {
@@ -89,9 +102,9 @@ gelly.parse = function(text, config) {
       return intT;
     }
     var idn = acceptIdn();
-    if(idn !== null && !arrayContains(keywords, idn)) {
-      return symbolTerm(idn);
-    } else if(idn !== null && arrayContains(keywords, idn)) {
+    if(idn !== null && !isKeyword(idn)) {
+      return identifierTerm(idn);
+    } else if(idn !== null && isKeyword(idn)) {
       i = i - idn.length;
     }
     var st = acceptString();
@@ -134,6 +147,8 @@ gelly.parse = function(text, config) {
     }
     return null;
   }
+
+
 
   function acceptPrefixExp() {
     var op = acceptOps(prefixOps);
@@ -195,7 +210,7 @@ gelly.parse = function(text, config) {
       op = acceptOps(operators[level]);
     }
     while(op !== null) {
-      if(!acceptWhiteSpace() && !isNoWhitespaceOp(op)) {
+      if(!(op !== '_' ? acceptAnyWhiteSpace() : acceptWhiteSpace()) && !isNoWhitespaceOp(op)) {
         t = postfixOpTerm(op, t, pos);
         acceptWhiteSpace();
         op = acceptOps(operators[level]);
@@ -371,7 +386,8 @@ gelly.parse = function(text, config) {
     if(idn === null) {
       return null;
     } 
-    if(arrayContains(keywords, idn)) {
+    if(isKeyword(idn)) {
+      accept(':');
       return idn;
     } else {
       i = oldI;
@@ -403,16 +419,74 @@ gelly.parse = function(text, config) {
       return null;
     }
     var s = '';
-    if(text[i] == '"') {
+    if(lookAhead('"""')) { // HERE-DOC
+      var interParts = [];
+      var isInterpol = false;
+      i += 3;
+      while(i < text.length && !lookAhead('"""')) {
+        if(lookAhead('$[') && (i === 0 || text[i-1] !== '\\')) {
+          var oldI = i;
+          i += 2; // skip $[
+          var t = acceptExp();
+          if(t && lookAhead(']')) {
+            isInterpol = true;
+            if(s) {
+              interParts.push(doubleQuoteStringTerm(s, pos));
+            }
+            interParts.push(interpolTerm(t, oldI));
+            s = '';
+          } else {
+            i = oldI;
+            s += text[i];
+          }
+        } else {
+          s += text[i];
+        }
+        i++;
+      }
+      i += 3;
+      if(s) {
+        interParts.push(doubleQuoteStringTerm(s, pos));
+      }
+      if(isInterpol) {
+        return interpolatedStringTerm(interParts, pos);
+      } else {
+        return doubleQuoteStringTerm(s, pos);
+      }
+    } else if(text[i] == '"') {
+      var interParts = [];
+      var isInterpol = false;
       i++;
       while(i < text.length && text[i] != '"' && text[i-1] != '\\') {
-        if(!(text[i] == '\\' && i < (text.length + 1) && text[i+1] == '"')) {
+        if(lookAhead('$[') && (i === 0 || text[i-1] !== '\\')) {
+          var oldI = i;
+          i += 2; // skip $[
+          var t = acceptExp();
+          if(t && lookAhead(']')) {
+            isInterpol = true;
+            if(s) {
+              interParts.push(doubleQuoteStringTerm(s, pos));
+            }
+            interParts.push(interpolTerm(t, oldI));
+            s = '';
+          } else {
+            i = oldI;
+            s += text[i];
+          }
+        } else if(!(text[i] == '\\' && i < (text.length + 1) && text[i+1] == '"')) {
           s += text[i];
         }
         i++;
       }
       i++;
-      return doubleQuoteStringTerm(s, pos);
+      if(s) {
+        interParts.push(doubleQuoteStringTerm(s, pos));
+      }
+      if(isInterpol) {
+        return interpolatedStringTerm(interParts, pos);
+      } else {
+        return doubleQuoteStringTerm(s, pos);
+      }
     } else if(text[i] == "'") {
       i++;
       while(i < text.length && text[i] != "'" && text[i-1] != '\\') {
@@ -488,7 +562,7 @@ gelly.parse = function(text, config) {
 };
 
 gelly.gellyAtermToAterm = function(t) {
-  var pattern = aterm.parse('Op("_",Sym(<cons>),ParList(<args>))');
+  var pattern = aterm.parse('Op("_",Id(<cons>),ParList(<args>))');
   var matches = {};
   if(pattern.match(t, matches)) {
     return new aterm.ApplTerm(matches.cons.s, matches.args.children.map(gelly.gellyAtermToAterm));
@@ -499,8 +573,8 @@ gelly.gellyAtermToAterm = function(t) {
     return new aterm.IntTerm(matches.n.n);
   }
 
-  var pattern = aterm.parse('DQString(<s>)');
-  if(pattern.match(t, matches)) {
+  var strPattern = aterm.parse('DQString(<s>)');
+  if(strPattern.match(t, matches)) {
     return new aterm.StringTerm(matches.s.s);
   }
 
@@ -509,9 +583,24 @@ gelly.gellyAtermToAterm = function(t) {
     return new aterm.ListTerm(matches.l.children.map(gelly.gellyAtermToAterm));
   }
 
-  var pattern = aterm.parse('PostfixOp(">",PrefixOp("<",Sym(<mv>)))');
+  var pattern = aterm.parse('Id(<mv>)');
   if(pattern.match(t, matches)) {
     return new aterm.PlaceholderTerm(matches.mv.s);
+  }
+
+  var pattern = aterm.parse('IString(<parts>)');
+  if(pattern.match(t, matches)) {
+    var parts = [];
+    var pattern = aterm.parse('InterpolTerm(Id(<id>))');
+    matches.parts.children.forEach(function(part) {
+        var match = {};
+        if(strPattern.match(part, matches)) {
+          parts.push(new aterm.StringTerm(matches.s.s));
+        } else if(pattern.match(part, matches)) {
+          parts.push(new aterm.PlaceholderTerm(matches.id.s));
+        }
+      });
+    return new aterm.ListTerm(parts);
   }
 
   return "Fail";
